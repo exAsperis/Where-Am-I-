@@ -1,69 +1,78 @@
 # Where am I?
 
-Where am I? is an [Owlbear Rodeo](https://www.owlbear.rodeo/) extension
-that frames the visible characters owned by a player in that client’s
-viewport. Each client acts independently: a player’s local action never moves
-another client, and a GM can move a player’s viewport only by explicitly
-sending that player a remote focus command.
+Where am I? is an [Owlbear Rodeo](https://www.owlbear.rodeo/) extension that
+helps players and GMs find player-owned characters on the current scene.
 
-## How ownership and framing work
+## For players and GMs
 
-An item belongs to a player only when it is on the `CHARACTER` layer and its
-`createdUserId` is that player’s stable ID. Selection, movement permissions,
-metadata, `lastModifiedUserId`, and recent movement do not affect ownership.
-Hidden items and items on other layers are excluded.
+The extension is already hosted. You do not need to download this repository,
+build the project, deploy a package, or host your own copy.
 
-When a player owns several visible characters, Where am I? obtains their
-combined Owlbear Rodeo bounds and frames all of them together. The extension
-adds about two scene-grid cells of padding on every side, with a practical
-minimum when the grid DPI is unavailable or very small.
+### Install the extension
 
-When an action targets one character, the viewport centers that token at the
-user's preferred zoom. The preference defaults to 50% and can be changed from
-either the player or GM popover.
+Add this public manifest URL to your Owlbear Rodeo room:
 
-## Player controls
+<https://exasperis.github.io/Where-Am-I-/manifest.json>
 
-- **Automatically find my character** controls local automatic focusing when
-  the extension initializes with a ready scene and when a new scene becomes
-  ready. It defaults to enabled and is stored in player metadata.
-- **Find me now** performs a one-time local focus even when the personal
-  automatic setting is off.
-- **Single-character zoom** sets the zoom used whenever that client focuses one
-  token. It accepts 10–200% and defaults to 50%.
-- Players who own more than one visible character get a **My characters** list,
-  labeled by token name, for focusing one token at a time. **Find me now**
-  continues to frame all of their tokens together.
+Once installed by the room's GM, players can open **Where am I?** from the
+Owlbear Rodeo extension bar.
 
-The GM’s global setting overrides player behavior. While it is off, automatic
-focus, **Find me now**, and remote GM focus commands are suppressed. A player’s
-personal preference is retained and becomes effective again when the GM
-re-enables the feature.
+### Player controls
 
-The automatic-focus and single-character zoom preferences are stored together
-in namespaced player metadata, so each GM and player keeps their own settings.
+- **Automatically find my character** focuses your character when the
+  extension starts and when a new scene becomes ready. It defaults to enabled.
+- **Find me now** frames all your visible characters together.
+- **Single-character zoom** controls how closely one selected character is
+  framed. It defaults to 50% and accepts 10–200%.
+- If you own several visible characters, **My characters** lets you focus one
+  named token at a time.
 
-## GM controls
+Your automatic-focus and zoom settings are saved to your Owlbear Rodeo player
+metadata.
 
-- **Enable Where am I? for players** controls player automatic, explicit, and
-  remotely requested focusing for the room.
-- **Send to character** sends a short-lived command to the selected player’s
-  connected clients.
-- **View character** frames that player’s visible characters only in the GM’s
-  viewport.
-- **View whole party** frames all visible Character-layer items owned by
-  currently connected players in the GM’s viewport.
+### GM controls
 
-Duplicate connections with the same stable player ID appear as one row. Rows
-use Owlbear player names, with a short non-sensitive player-ID suffix only when
-the name is blank. GM-local view actions use the GM's own single-character zoom
-and remain available while the global player feature is disabled. Remotely
-focused players use their own zoom preference.
+- **Enable Where am I? for players** enables or disables player-facing
+  behavior for the room.
+- **Send to character** asks the selected player's clients to focus their
+  character.
+- **View character** frames one player's visible characters in your viewport.
+- **View whole party** frames the visible characters owned by connected
+  players in your viewport.
 
-## Install and build
+The GM player list uses Owlbear player names. GM-local actions use the GM's own
+saved zoom setting, while remotely focused players use their own settings.
 
-The project requires Node.js 20 or newer and pnpm 11. From a normal development
-environment:
+### Character ownership and privacy
+
+Where am I? includes visible items on the `CHARACTER` layer that were created
+by the player. Hidden items and items on other layers are excluded. When a
+player owns several visible characters, the extension can frame their combined
+bounds with extra scene-grid padding.
+
+Each client's viewport acts independently. A player's local action never moves
+another client's viewport, and a GM moves a player's viewport only by
+explicitly sending that player a focus command.
+
+The extension has no backend, accounts, analytics, or external data storage.
+Preferences use namespaced Owlbear Rodeo player metadata, global enablement
+uses room metadata, and GM focus requests use Owlbear Rodeo broadcasts.
+
+### Support
+
+For help, bug reports, or feature requests, open a
+[GitHub issue](https://github.com/exAsperis/Where-Am-I-/issues).
+
+---
+
+## For developers and contributors
+
+Everything below this point concerns source development, testing, releases,
+hosting, and extension-store maintenance. End users do not need these steps.
+
+### Development setup
+
+The project requires Node.js 20 or newer and pnpm 11:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -71,14 +80,14 @@ pnpm run check
 pnpm run build
 ```
 
-Codex Desktop contributors should follow
+Codex Desktop contributors must follow
 [`docs/development-environment.md`](docs/development-environment.md), which
-documents the bundled Node and pnpm paths, version synchronization, production
-base path, deployment workflow, and OneDrive recovery procedure.
+documents the bundled toolchain, version synchronization, production base
+path, deployment workflow, and OneDrive recovery procedure.
 
-The production build emits `main.html`, `background.html`, the manifest, and
-assets into the ignored `dist/` directory. For GitHub Pages, build with the
-repository subpath:
+The production build emits `main.html`, `background.html`, the manifest, store
+listing, and assets into the ignored `dist/` directory. For GitHub Pages, build
+with the repository subpath:
 
 ```powershell
 $env:VITE_BASE_PATH = "/Where-Am-I-/"
@@ -87,22 +96,21 @@ pnpm run build
 
 Do not use a local browser preview for Owlbear integration in this workspace.
 Deploy an explicitly authorized build, verify its public manifest and assets,
-and then install the public manifest URL in Owlbear Rodeo.
+and then test through the hosted manifest in Owlbear Rodeo.
 
-## Extension store publication
+### Extension-store publication
 
-The store listing source is [`public/store.md`](public/store.md). After a
-successful GitHub Pages deployment it is available at
+The store listing source is [`public/store.md`](public/store.md), hosted at
 <https://exasperis.github.io/Where-Am-I-/store.md>.
 
-To submit the extension, add the following entry to the official Owlbear Rodeo
+To submit the extension, add this entry to the official Owlbear Rodeo
 extensions repository's `extensions.json` in a single-commit pull request:
 
 ```json
 "where-am-i": "https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/public/store.md"
 ```
 
-## Manual Owlbear Rodeo checklist
+### Manual Owlbear Rodeo release checklist
 
 Use separate signed-in clients where the scenario requires more than one
 connection:
@@ -113,22 +121,20 @@ connection:
 4. Enabled player changes scenes.
 5. Disabled player changes scenes.
 6. Player presses **Find me now**.
-7. One player’s local action does not affect another player.
-8. GM disables the feature globally.
-9. GM re-enables it without changing player preferences.
-10. GM remotely focuses one player without moving other players.
-11. GM focuses their own viewport on one player.
-12. GM focuses their own viewport on the whole party.
-13. A player has no owned character.
-14. A token is hidden.
-15. A player joins from two simultaneous connections.
-16. Players join and leave while the GM popover is open.
-17. Player and GM single-character zoom preferences default to 50%.
-18. Each role changes its zoom preference and sees it persist after reopening.
-19. A multi-token player focuses each named token individually.
-20. GM player rows use Owlbear player names rather than token names.
-21. The extension bar and manifest use the new orange/blue `logo.svg` artwork.
+7. One player's local action does not affect another player.
+8. GM disables and re-enables the feature without changing player preferences.
+9. GM remotely focuses one player without moving other players.
+10. GM focuses their viewport on one player and then the whole party.
+11. A player has no owned character.
+12. A token is hidden.
+13. A player joins from two simultaneous connections.
+14. Players join and leave while the GM popover is open.
+15. Player and GM zoom preferences default to 50%.
+16. Each role changes its zoom preference and sees it persist after reopening.
+17. A multi-token player focuses each named token individually.
+18. GM player rows use Owlbear player names rather than token names.
+19. The extension bar and manifest use the orange/blue logo artwork.
 
 Also confirm concise feedback for an absent scene, an absent character, a
-completed focus, a disabled global feature, and a sent remote command; check
+completed focus, a disabled global feature, and a sent remote command. Check
 keyboard focus visibility and both Owlbear light and dark themes.
