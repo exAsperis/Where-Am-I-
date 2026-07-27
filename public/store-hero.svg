@@ -15,9 +15,9 @@
   <g transform="translate(130 185) scale(13.7)" filter="url(#shadow)">
     <circle cx="9.5" cy="9.5" r="8.44" fill="#fff" stroke="#fa5300" stroke-width="1.98"/>
     <path d="m9.5 3.92-.7 1.2-.69 1.2h2.77l-.69-1.2z" fill="none" stroke="#fa5300" stroke-width="1.59"/>
-    <circle cx="9.5" cy="9.5" r="3.09" fill="none" stroke="#1000fa" stroke-width=".79"/>
-    <text x="7.8" y="11.7" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="6" fill="#111827">?</text>
-    <rect x="6.46" y="12.33" width="6.07" height="1.15" rx=".3" fill="#1100fa"/>
+    <circle cx="9.5" cy="9.5" r="3.09" fill="none" stroke="#9b61ff" stroke-width=".79"/>
+    <text x="7.8" y="11.7" font-family="Arial Rounded MT Bold, Arial, sans-serif" font-size="6" fill="#9a61ff">?</text>
+    <rect x="6.46" y="12.33" width="6.07" height="1.15" rx=".3" fill="#995fff"/>
   </g>
   <text x="500" y="270" fill="#fff" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="800">Where am I?</text>
   <text x="505" y="345" fill="#c7d2fe" font-family="Inter, Arial, sans-serif" font-size="34">Find your characters in Owlbear Rodeo.</text>

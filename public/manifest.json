@@ -1,17 +1,17 @@
 {
   "name": "Where am I?",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "manifest_version": 1,
   "author": "ex Asperis",
   "description": "Find and frame visible Character-layer tokens owned by each player.",
   "homepage_url": "https://github.com/exAsperis/Where-Am-I-",
-  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.3.1",
+  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.3.2",
   "action": {
     "title": "Where am I?",
-    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.3.1",
-    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.3.1",
+    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.3.2",
+    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.3.2",
     "height": 300,
     "width": 360
   },
-  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.3.1"
+  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.3.2"
 }
