@@ -1,6 +1,8 @@
 import OBR, { type Item } from "@owlbear-rodeo/sdk";
 
+import { DEFAULT_SINGLE_TOKEN_ZOOM } from "./constants";
 import {
+  createBoundsForZoom,
   filterVisibleOwnedCharacters,
   filterVisiblePartyCharacters,
   isVisibleCharacter,
@@ -35,6 +37,7 @@ async function getReadySceneItems(): Promise<
 
 export async function focusViewportOnCharacterItems(
   itemsOrIds: readonly Item[] | readonly string[],
+  singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
 ): Promise<FocusResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -56,12 +59,24 @@ export async function focusViewportOnCharacterItems(
     }
 
     const ids = characterItems.map((item) => item.id);
-    const [bounds, gridDpi] = await Promise.all([
-      OBR.scene.items.getItemBounds(ids),
-      OBR.scene.grid.getDpi(),
-    ]);
-
-    await OBR.viewport.animateToBounds(padBounds(bounds, gridDpi));
+    const bounds = await OBR.scene.items.getItemBounds(ids);
+    if (ids.length === 1) {
+      const [viewportWidth, viewportHeight] = await Promise.all([
+        OBR.viewport.getWidth(),
+        OBR.viewport.getHeight(),
+      ]);
+      await OBR.viewport.animateToBounds(
+        createBoundsForZoom(
+          bounds.center,
+          singleTokenZoom,
+          viewportWidth,
+          viewportHeight,
+        ),
+      );
+    } else {
+      const gridDpi = await OBR.scene.grid.getDpi();
+      await OBR.viewport.animateToBounds(padBounds(bounds, gridDpi));
+    }
     return { ok: true, itemCount: ids.length };
   } catch (error) {
     console.error("Where am I? failed to focus the viewport.", error);
@@ -71,6 +86,7 @@ export async function focusViewportOnCharacterItems(
 
 export async function focusViewportOnPlayerCharacters(
   targetPlayerId: string,
+  singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
 ): Promise<FocusResult> {
   const scene = await getReadySceneItems();
   if (!scene.ok) {
@@ -79,11 +95,13 @@ export async function focusViewportOnPlayerCharacters(
 
   return focusViewportOnCharacterItems(
     filterVisibleOwnedCharacters(scene.items, targetPlayerId),
+    singleTokenZoom,
   );
 }
 
 export async function focusViewportOnPartyCharacters(
   playerIds: ReadonlySet<string>,
+  singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
 ): Promise<FocusResult> {
   const scene = await getReadySceneItems();
   if (!scene.ok) {
@@ -92,5 +110,6 @@ export async function focusViewportOnPartyCharacters(
 
   return focusViewportOnCharacterItems(
     filterVisiblePartyCharacters(scene.items, playerIds),
+    singleTokenZoom,
   );
 }

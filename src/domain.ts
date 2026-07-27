@@ -1,4 +1,10 @@
-import type { BoundingBox, Item, Player } from "@owlbear-rodeo/sdk";
+import type { BoundingBox, Item, Player, Vector2 } from "@owlbear-rodeo/sdk";
+
+import {
+  DEFAULT_SINGLE_TOKEN_ZOOM,
+  MAX_SINGLE_TOKEN_ZOOM,
+  MIN_SINGLE_TOKEN_ZOOM,
+} from "./constants";
 
 export interface CharacterItem {
   id: string;
@@ -13,6 +19,7 @@ export interface PartyPlayer {
   connectionId: string;
   role: Player["role"];
   color: string;
+  name: string;
 }
 
 export function isVisibleCharacter(
@@ -53,20 +60,48 @@ export function groupPlayerConnections<T extends PartyPlayer>(
   return [...uniquePlayers.values()];
 }
 
-export function formatPlayerLabel(
-  playerId: string,
-  characterNames: readonly string[],
-): string {
-  const names = [
-    ...new Set(characterNames.map((name) => name.trim()).filter(Boolean)),
-  ];
-
-  if (names.length > 0) {
-    return names.join(", ");
+export function formatPlayerName(playerId: string, playerName: string): string {
+  const name = playerName.trim();
+  if (name) {
+    return name;
   }
-
   const suffix = playerId.slice(-6) || "unknown";
   return `Player • ${suffix}`;
+}
+
+export function normalizeZoomScale(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return DEFAULT_SINGLE_TOKEN_ZOOM;
+  }
+  return Math.min(
+    MAX_SINGLE_TOKEN_ZOOM,
+    Math.max(MIN_SINGLE_TOKEN_ZOOM, value),
+  );
+}
+
+export function createBoundsForZoom(
+  center: Vector2,
+  zoomScale: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): BoundingBox {
+  const scale = normalizeZoomScale(zoomScale);
+  const safeWidth =
+    Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth : 1;
+  const safeHeight =
+    Number.isFinite(viewportHeight) && viewportHeight > 0 ? viewportHeight : 1;
+  const width = safeWidth / scale;
+  const height = safeHeight / scale;
+  const min = {
+    x: center.x - width / 2,
+    y: center.y - height / 2,
+  };
+  const max = {
+    x: center.x + width / 2,
+    y: center.y + height / 2,
+  };
+
+  return { min, max, width, height, center: { ...center } };
 }
 
 export function calculatePadding(

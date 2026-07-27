@@ -18,6 +18,10 @@ combined Owlbear Rodeo bounds and frames all of them together. The extension
 adds about two scene-grid cells of padding on every side, with a practical
 minimum when the grid DPI is unavailable or very small.
 
+When an action targets one character, the viewport centers that token at the
+user's preferred zoom. The preference defaults to 50% and can be changed from
+either the player or GM popover.
+
 ## Player controls
 
 - **Automatically find my character** controls local automatic focusing when
@@ -25,11 +29,19 @@ minimum when the grid DPI is unavailable or very small.
   ready. It defaults to enabled and is stored in player metadata.
 - **Find me now** performs a one-time local focus even when the personal
   automatic setting is off.
+- **Single-character zoom** sets the zoom used whenever that client focuses one
+  token. It accepts 10–200% and defaults to 50%.
+- Players who own more than one visible character get a **My characters** list,
+  labeled by token name, for focusing one token at a time. **Find me now**
+  continues to frame all of their tokens together.
 
 The GM’s global setting overrides player behavior. While it is off, automatic
 focus, **Find me now**, and remote GM focus commands are suppressed. A player’s
 personal preference is retained and becomes effective again when the GM
 re-enables the feature.
+
+The automatic-focus and single-character zoom preferences are stored together
+in namespaced player metadata, so each GM and player keeps their own settings.
 
 ## GM controls
 
@@ -42,10 +54,11 @@ re-enables the feature.
 - **View whole party** frames all visible Character-layer items owned by
   currently connected players in the GM’s viewport.
 
-Duplicate connections with the same stable player ID appear as one row. Named
-owned characters provide the row label; otherwise the UI shows a short,
-non-sensitive player-ID suffix. GM-local view actions remain available while
-the global player feature is disabled.
+Duplicate connections with the same stable player ID appear as one row. Rows
+use Owlbear player names, with a short non-sensitive player-ID suffix only when
+the name is blank. GM-local view actions use the GM's own single-character zoom
+and remain available while the global player feature is disabled. Remotely
+focused players use their own zoom preference.
 
 ## Install and build
 
@@ -97,6 +110,11 @@ connection:
 14. A token is hidden.
 15. A player joins from two simultaneous connections.
 16. Players join and leave while the GM popover is open.
+17. Player and GM single-character zoom preferences default to 50%.
+18. Each role changes its zoom preference and sees it persist after reopening.
+19. A multi-token player focuses each named token individually.
+20. GM player rows use Owlbear player names rather than token names.
+21. The extension bar and manifest use the new orange/blue `logo.svg` artwork.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command; check

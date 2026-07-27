@@ -14,6 +14,8 @@ const sdk = vi.hoisted(() => ({
   },
   viewport: {
     animateToBounds: vi.fn(),
+    getWidth: vi.fn(),
+    getHeight: vi.fn(),
   },
 }));
 
@@ -57,6 +59,22 @@ describe("viewport focus service", () => {
       center: { x: 50, y: 50 },
     });
     sdk.viewport.animateToBounds.mockResolvedValue(undefined);
+    sdk.viewport.getWidth.mockResolvedValue(800);
+    sdk.viewport.getHeight.mockResolvedValue(600);
+  });
+
+  it("defaults to 50% zoom for a single character", async () => {
+    const result = await focusViewportOnCharacterItems([item("one")]);
+
+    expect(result).toEqual({ ok: true, itemCount: 1 });
+    expect(sdk.viewport.animateToBounds).toHaveBeenCalledWith({
+      min: { x: -750, y: -550 },
+      max: { x: 850, y: 650 },
+      width: 1600,
+      height: 1200,
+      center: { x: 50, y: 50 },
+    });
+    expect(sdk.scene.grid.getDpi).not.toHaveBeenCalled();
   });
 
   it("frames all visible characters owned by the target player", async () => {

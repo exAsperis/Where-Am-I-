@@ -90,7 +90,10 @@ export class BackgroundController {
         return;
       }
 
-      const result = await focusViewportOnPlayerCharacters(this.#playerId);
+      const result = await focusViewportOnPlayerCharacters(
+        this.#playerId,
+        settings.singleTokenZoom,
+      );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
       }
@@ -129,7 +132,11 @@ export class BackgroundController {
       });
 
       if (decision.execute) {
-        await focusViewportOnPlayerCharacters(this.#playerId);
+        const settings = await getPlayerSettings();
+        await focusViewportOnPlayerCharacters(
+          this.#playerId,
+          settings.singleTokenZoom,
+        );
       }
     } catch (error) {
       console.error(

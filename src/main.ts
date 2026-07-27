@@ -4,15 +4,18 @@ import {
   FOCUS_BROADCAST_CHANNEL,
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
-  PLAYER_POPOVER_HEIGHT,
+  PLAYER_POPOVER_MAX_HEIGHT,
+  PLAYER_POPOVER_MIN_HEIGHT,
   POPOVER_WIDTH,
 } from "./constants";
 import {
   filterVisibleOwnedCharacters,
-  formatPlayerLabel,
+  formatPlayerName,
   groupPlayerConnections,
+  normalizeZoomScale,
 } from "./domain";
 import {
+  focusViewportOnCharacterItems,
   focusViewportOnPartyCharacters,
   focusViewportOnPlayerCharacters,
   type FocusResult,
@@ -24,6 +27,7 @@ import {
   readRoomSettings,
   setGlobalEnabled,
   setPlayerAutoFocusEnabled,
+  setPlayerSingleTokenZoom,
 } from "./metadata";
 import { createFocusCommand } from "./remote-focus";
 import "./styles.css";
@@ -42,6 +46,7 @@ class PopoverController {
   #role: Player["role"] = "PLAYER";
   #globalEnabled = true;
   #autoFocusEnabled = true;
+  #singleTokenZoom = 0.5;
   #players: Player[] = [];
   #items: Item[] = [];
   #busyAction: string | undefined;
@@ -55,13 +60,16 @@ class PopoverController {
     document.documentElement.dataset.release = RELEASE_VERSION;
 
     try {
-      const [role, theme, roomSettings] = await Promise.all([
+      const [role, theme, roomSettings, playerSettings] = await Promise.all([
         OBR.player.getRole(),
         OBR.theme.getTheme(),
         getRoomSettings(),
+        getPlayerSettings(),
       ]);
       this.#role = role;
       this.#globalEnabled = roomSettings.globalEnabled;
+      this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
+      this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#applyTheme(theme);
 
       this.#disposeCallbacks.push(
@@ -74,6 +82,12 @@ class PopoverController {
               tone: "warning",
             };
           }
+          this.#render();
+        }),
+        OBR.player.onChange((player) => {
+          const settings = readPlayerSettings(player.metadata);
+          this.#autoFocusEnabled = settings.autoFocusEnabled;
+          this.#singleTokenZoom = settings.singleTokenZoom;
           this.#render();
         }),
       );
@@ -101,28 +115,29 @@ class PopoverController {
   }
 
   async #startPlayerView(): Promise<void> {
-    try {
-      this.#autoFocusEnabled = (await getPlayerSettings()).autoFocusEnabled;
-    } catch (error) {
-      console.error("Where am I? could not read the player preference.", error);
-      this.#status = {
-        message: "Your saved preference could not be read.",
-        tone: "error",
-      };
-    }
-
+    this.#items = await this.#getSceneItems();
     this.#disposeCallbacks.push(
-      OBR.player.onChange((player) => {
-        this.#autoFocusEnabled = readPlayerSettings(
-          player.metadata,
-        ).autoFocusEnabled;
+      OBR.scene.items.onChange((items) => {
+        this.#items = items;
+        void this.#resizePlayerPopover().catch((error: unknown) => {
+          console.error(
+            "Where am I? could not resize the player popover.",
+            error,
+          );
+        });
         this.#render();
       }),
+      OBR.scene.onReadyChange((ready) => {
+        if (ready) {
+          void this.#refreshItems();
+        } else {
+          this.#items = [];
+          this.#render();
+        }
+      }),
     );
-    await Promise.all([
-      OBR.action.setWidth(POPOVER_WIDTH),
-      OBR.action.setHeight(PLAYER_POPOVER_HEIGHT),
-    ]);
+    await OBR.action.setWidth(POPOVER_WIDTH);
+    await this.#resizePlayerPopover();
   }
 
   async #startGmView(): Promise<void> {
@@ -168,6 +183,11 @@ class PopoverController {
   async #refreshItems(): Promise<void> {
     try {
       this.#items = await this.#getSceneItems();
+      if (this.#role === "GM") {
+        await this.#resizeGmPopover();
+      } else {
+        await this.#resizePlayerPopover();
+      }
       this.#render();
     } catch (error) {
       console.error("Where am I? could not refresh character labels.", error);
@@ -175,11 +195,26 @@ class PopoverController {
   }
 
   async #resizeGmPopover(): Promise<void> {
-    const desiredHeight = 230 + this.#players.length * 66;
+    const desiredHeight = 290 + this.#players.length * 66;
     await OBR.action.setHeight(
       Math.min(
         GM_POPOVER_MAX_HEIGHT,
         Math.max(GM_POPOVER_MIN_HEIGHT, desiredHeight),
+      ),
+    );
+  }
+
+  async #resizePlayerPopover(): Promise<void> {
+    const characterCount = filterVisibleOwnedCharacters(
+      this.#items,
+      OBR.player.id,
+    ).length;
+    const desiredHeight =
+      350 + (characterCount > 1 ? 42 + characterCount * 45 : 0);
+    await OBR.action.setHeight(
+      Math.min(
+        PLAYER_POPOVER_MAX_HEIGHT,
+        Math.max(PLAYER_POPOVER_MIN_HEIGHT, desiredHeight),
       ),
     );
   }
@@ -237,6 +272,8 @@ class PopoverController {
     const controls = document.createElement("div");
     controls.className = "controls";
 
+    controls.append(this.#createZoomField());
+
     const toggle = this.#createToggle(
       "Automatically find my character",
       this.#autoFocusEnabled,
@@ -253,6 +290,44 @@ class PopoverController {
     );
     controls.append(findButton);
 
+    const ownedCharacters = filterVisibleOwnedCharacters(
+      this.#items,
+      OBR.player.id,
+    );
+    if (ownedCharacters.length > 1) {
+      const section = document.createElement("section");
+      section.className = "party";
+      const heading = document.createElement("div");
+      heading.className = "section-heading";
+      heading.innerHTML = "<h2>My characters</h2>";
+      section.append(heading);
+
+      const list = document.createElement("ul");
+      list.className = "character-list";
+      for (const character of ownedCharacters) {
+        const row = document.createElement("li");
+        row.className = "character-row";
+        const name = document.createElement("span");
+        name.className = "player-label";
+        name.textContent = character.name.trim() || "Unnamed character";
+        row.append(
+          name,
+          this.#createButton(
+            this.#busyAction === `character-${character.id}`
+              ? "Finding…"
+              : "Find",
+            "small",
+            !this.#globalEnabled || this.#busyAction !== undefined,
+            () => void this.#findCharacter(character.id),
+            `Find ${name.textContent}`,
+          ),
+        );
+        list.append(row);
+      }
+      section.append(list);
+      controls.append(section);
+    }
+
     if (!this.#globalEnabled) {
       const explanation = document.createElement("p");
       explanation.className = "help";
@@ -267,6 +342,7 @@ class PopoverController {
   #renderGmControls(): HTMLElement {
     const controls = document.createElement("div");
     controls.className = "controls";
+    controls.append(this.#createZoomField());
     controls.append(
       this.#createToggle(
         "Enable Where am I? for players",
@@ -312,10 +388,6 @@ class PopoverController {
   }
 
   #renderPlayerRow(player: Player): HTMLLIElement {
-    const ownedCharacters = filterVisibleOwnedCharacters(
-      this.#items,
-      player.id,
-    );
     const row = document.createElement("li");
     row.className = "player-row";
 
@@ -327,10 +399,7 @@ class PopoverController {
     color.setAttribute("aria-hidden", "true");
     const label = document.createElement("span");
     label.className = "player-label";
-    label.textContent = formatPlayerLabel(
-      player.id,
-      ownedCharacters.map((item) => item.name),
-    );
+    label.textContent = formatPlayerName(player.id, player.name);
     identity.append(color, label);
 
     const actions = document.createElement("div");
@@ -378,6 +447,35 @@ class PopoverController {
     visual.className = "switch";
     visual.setAttribute("aria-hidden", "true");
     label.append(text, input, visual);
+    return label;
+  }
+
+  #createZoomField(): HTMLLabelElement {
+    const label = document.createElement("label");
+    label.className = "setting-field";
+    const text = document.createElement("span");
+    text.className = "setting-label";
+    text.textContent = "Single-character zoom";
+    const value = document.createElement("span");
+    value.className = "zoom-value";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "10";
+    input.max = "200";
+    input.step = "5";
+    input.inputMode = "numeric";
+    input.value = String(Math.round(this.#singleTokenZoom * 100));
+    input.disabled = this.#busyAction !== undefined;
+    input.setAttribute("aria-describedby", "zoom-unit");
+    input.addEventListener("change", () => {
+      const scale = normalizeZoomScale(Number(input.value) / 100);
+      void this.#updateSingleTokenZoom(scale);
+    });
+    const unit = document.createElement("span");
+    unit.id = "zoom-unit";
+    unit.textContent = "%";
+    value.append(input, unit);
+    label.append(text, value);
     return label;
   }
 
@@ -437,6 +535,17 @@ class PopoverController {
     });
   }
 
+  async #updateSingleTokenZoom(singleTokenZoom: number): Promise<void> {
+    await this.#runAction("zoom-setting", async () => {
+      await setPlayerSingleTokenZoom(singleTokenZoom);
+      this.#singleTokenZoom = singleTokenZoom;
+      this.#status = {
+        message: `Single-character zoom set to ${Math.round(singleTokenZoom * 100)}%.`,
+        tone: "success",
+      };
+    });
+  }
+
   async #updateGlobalSetting(enabled: boolean): Promise<void> {
     await this.#runAction("global-setting", async () => {
       await setGlobalEnabled(enabled);
@@ -456,7 +565,24 @@ class PopoverController {
         return;
       }
       this.#setFocusStatus(
-        await focusViewportOnPlayerCharacters(OBR.player.id),
+        await focusViewportOnPlayerCharacters(
+          OBR.player.id,
+          this.#singleTokenZoom,
+        ),
+      );
+    });
+  }
+
+  async #findCharacter(characterId: string): Promise<void> {
+    await this.#runAction(`character-${characterId}`, async () => {
+      if (!(await this.#confirmGlobalEnabled())) {
+        return;
+      }
+      this.#setFocusStatus(
+        await focusViewportOnCharacterItems(
+          [characterId],
+          this.#singleTokenZoom,
+        ),
       );
     });
   }
@@ -483,7 +609,9 @@ class PopoverController {
 
   async #viewPlayer(playerId: string): Promise<void> {
     await this.#runAction(`view-${playerId}`, async () => {
-      this.#setFocusStatus(await focusViewportOnPlayerCharacters(playerId));
+      this.#setFocusStatus(
+        await focusViewportOnPlayerCharacters(playerId, this.#singleTokenZoom),
+      );
     });
   }
 
@@ -496,6 +624,7 @@ class PopoverController {
       this.#setFocusStatus(
         await focusViewportOnPartyCharacters(
           new Set(currentPlayers.map((player) => player.id)),
+          this.#singleTokenZoom,
         ),
       );
     });

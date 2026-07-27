@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
+
 <svg
    width="19mm"
    height="19mm"
    viewBox="0 0 19 19"
    version="1.1"
    id="svg1"
-   role="img"
-   aria-label="Where am I?"
    inkscape:version="1.4.4 (dcaf3e7, 2026-05-05)"
    sodipodi:docname="logo.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -33,7 +32,8 @@
      inkscape:window-y="259"
      inkscape:window-maximized="1"
      inkscape:current-layer="layer1" />
-  <defs id="defs1" />
+  <defs
+     id="defs1" />
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"

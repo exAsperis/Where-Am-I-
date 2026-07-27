@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculatePadding,
+  createBoundsForZoom,
   filterVisibleOwnedCharacters,
-  formatPlayerLabel,
+  formatPlayerName,
   groupPlayerConnections,
+  normalizeZoomScale,
   padBounds,
   resolveEnablement,
   type CharacterItem,
@@ -70,34 +72,33 @@ describe("party presentation", () => {
         connectionId: "connection-a",
         role: "PLAYER",
         color: "#f00",
+        name: "Alex",
       },
       {
         id: "player-1",
         connectionId: "connection-b",
         role: "PLAYER",
         color: "#f00",
+        name: "Alex",
       },
       {
         id: "gm-1",
         connectionId: "connection-gm",
         role: "GM",
         color: "#00f",
+        name: "Game Master",
       },
     ];
 
     expect(groupPlayerConnections(players)).toEqual([players[0]]);
   });
 
-  it("uses compact unique character names as the primary label", () => {
-    expect(formatPlayerLabel("player-abcdef", [" Mira ", "Bram", "Mira"])).toBe(
-      "Mira, Bram",
-    );
+  it("uses the Owlbear player name as the primary label", () => {
+    expect(formatPlayerName("player-abcdef", " Alex ")).toBe("Alex");
   });
 
-  it("uses a short player-ID suffix when no named characters exist", () => {
-    expect(formatPlayerLabel("player-abcdef", ["", "   "])).toBe(
-      "Player • abcdef",
-    );
+  it("uses a short player-ID suffix when no player name exists", () => {
+    expect(formatPlayerName("player-abcdef", "   ")).toBe("Player • abcdef");
   });
 });
 
@@ -127,6 +128,23 @@ describe("viewport framing", () => {
       height: 400,
       center: { x: 60, y: 120 },
     });
+  });
+
+  it("creates centered bounds that produce the requested viewport scale", () => {
+    expect(createBoundsForZoom({ x: 100, y: 200 }, 0.5, 800, 600)).toEqual({
+      min: { x: -700, y: -400 },
+      max: { x: 900, y: 800 },
+      width: 1600,
+      height: 1200,
+      center: { x: 100, y: 200 },
+    });
+  });
+
+  it("normalizes malformed and out-of-range zoom preferences", () => {
+    expect(normalizeZoomScale(undefined)).toBe(0.5);
+    expect(normalizeZoomScale(0.01)).toBe(0.1);
+    expect(normalizeZoomScale(3)).toBe(2);
+    expect(normalizeZoomScale(0.75)).toBe(0.75);
   });
 });
 
