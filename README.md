@@ -89,6 +89,19 @@ Do not use a local browser preview for Owlbear integration in this workspace.
 Deploy an explicitly authorized build, verify its public manifest and assets,
 and then install the public manifest URL in Owlbear Rodeo.
 
+## Extension store publication
+
+The store listing source is [`public/store.md`](public/store.md). After a
+successful GitHub Pages deployment it is available at
+<https://exasperis.github.io/Where-Am-I-/store.md>.
+
+To submit the extension, add the following entry to the official Owlbear Rodeo
+extensions repository's `extensions.json` in a single-commit pull request:
+
+```json
+"where-am-i": "https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/public/store.md"
+```
+
 ## Manual Owlbear Rodeo checklist
 
 Use separate signed-in clients where the scenario requires more than one

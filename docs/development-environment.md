@@ -93,6 +93,7 @@ For every public behavior change, update all of these together:
 - query version on the manifest popover URL;
 - query version on the manifest background URL;
 - query version on both manifest icon URLs;
+- query version on the store hero and icon URLs in `public/store.md`;
 - `src/version.ts` deterministic asset/cache-buster.
 
 `pnpm run check:versions` fails on drift. Add any future public URLs, including context-menu pages, to both the synchronization check and this list.
