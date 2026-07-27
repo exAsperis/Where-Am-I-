@@ -4,6 +4,7 @@ import {
   DEFAULT_GLOBAL_ENABLED,
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
+  DEFAULT_TARGET_INDICATOR_ENABLED,
   PLAYER_SETTINGS_METADATA_KEY,
   ROOM_SETTINGS_METADATA_KEY,
 } from "./constants";
@@ -12,6 +13,7 @@ import { normalizeZoomScale } from "./domain";
 export interface PlayerSettings {
   autoFocusEnabled: boolean;
   singleTokenZoom: number;
+  targetIndicatorEnabled: boolean;
 }
 
 export interface RoomSettings {
@@ -50,6 +52,12 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
       "singleTokenZoom" in settings
         ? normalizeZoomScale(settings.singleTokenZoom)
         : DEFAULT_SINGLE_TOKEN_ZOOM,
+    targetIndicatorEnabled: readBooleanSetting(
+      metadata,
+      PLAYER_SETTINGS_METADATA_KEY,
+      "targetIndicatorEnabled",
+      DEFAULT_TARGET_INDICATOR_ENABLED,
+    ),
   };
 }
 
@@ -93,6 +101,12 @@ export async function setPlayerSingleTokenZoom(
   singleTokenZoom: number,
 ): Promise<void> {
   await updatePlayerSettings({ singleTokenZoom });
+}
+
+export async function setPlayerTargetIndicatorEnabled(
+  targetIndicatorEnabled: boolean,
+): Promise<void> {
+  await updatePlayerSettings({ targetIndicatorEnabled });
 }
 
 export async function getRoomSettings(): Promise<RoomSettings> {

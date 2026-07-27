@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   RecentRequestIds,
+  createFocusCommand,
   isFocusCommand,
   routeFocusCommand,
   type FocusCommand,
@@ -40,6 +41,22 @@ describe("focus command validation and routing", () => {
     expect(isFocusCommand({ ...command, requestId: 17 })).toBe(false);
     expect(isFocusCommand({ ...command, sentAt: Number.NaN })).toBe(false);
     expect(isFocusCommand(null)).toBe(false);
+    expect(
+      isFocusCommand({ ...command, targetCharacterId: "character-1" }),
+    ).toBe(true);
+    expect(isFocusCommand({ ...command, targetCharacterId: "" })).toBe(false);
+    expect(isFocusCommand({ ...command, targetCharacterId: 17 })).toBe(false);
+  });
+
+  it("creates all-character and specific-character commands", () => {
+    expect(createFocusCommand("player-1")).not.toHaveProperty(
+      "targetCharacterId",
+    );
+    expect(createFocusCommand("player-1", "character-1")).toMatchObject({
+      type: "FOCUS_OWNED_CHARACTERS",
+      targetPlayerId: "player-1",
+      targetCharacterId: "character-1",
+    });
   });
 
   it("accepts a fresh command for this player from a connected GM", () => {

@@ -82,7 +82,7 @@ All commands below mean the bundled pnpm invocation described above.
 
 Vite produces separate `main.html` and `background.html` entry pages plus the public `manifest.json`. The default local base is `/`; production must set `VITE_BASE_PATH` to the actual hosting subpath, including leading and trailing slashes. The GitHub Pages workflow derives `/<repository-name>/`, so a renamed repository automatically gets the matching base.
 
-The production workflow in `.github/workflows/deploy-pages.yml` runs frozen installation, all internal checks, a production build, and then deploys the artifact to GitHub Pages. It requires Pages to use **GitHub Actions** as its source. A remote push, deployment, or workflow rerun is an external mutation and requires explicit user authorization.
+The production workflow in `.github/workflows/deploy-pages.yml` runs frozen installation, all internal checks, a production build, and then deploys the artifact to GitHub Pages. It requires Pages to use **GitHub Actions** as its source. A user request to prepare or release a version authorizes commit, push, deployment, and public-asset verification after the complete local release gate passes. Any failing gate stops the release before remote mutation. Rerunning a failed or cancelled remote workflow remains a separate action that requires explicit user authorization.
 
 ## Release and cache invalidation
 
@@ -108,9 +108,10 @@ Release order:
 4. Run unit tests.
 5. Produce a production build with the real hosting base.
 6. Review source and generated-output diffs.
-7. Commit and push only the reviewed result.
+7. If every preceding gate passed, commit and push the reviewed result under the
+   test-gated release authorization.
 8. Let the configured host deploy it and confirm completion.
-9. If GitHub Pages reports a transient `startup_failure` before a job starts, inspect the run before blaming source. Do not rerun without authorization.
+9. If GitHub Pages reports a transient `startup_failure` before a job starts, inspect the run before blaming source. Do not rerun without separate authorization.
 10. Fetch the public manifest with a unique cache-busting query, for example `manifest.json?verify=<timestamp>`.
 11. Fetch and verify every URL referenced by that manifest.
 12. Only then test integration and visuals in Owlbear Rodeo.

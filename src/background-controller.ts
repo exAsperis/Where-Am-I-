@@ -93,6 +93,7 @@ export class BackgroundController {
       const result = await focusViewportOnPlayerCharacters(
         this.#playerId,
         settings.singleTokenZoom,
+        settings.targetIndicatorEnabled,
       );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
@@ -136,6 +137,8 @@ export class BackgroundController {
         await focusViewportOnPlayerCharacters(
           this.#playerId,
           settings.singleTokenZoom,
+          settings.targetIndicatorEnabled,
+          decision.command.targetCharacterId,
         );
       }
     } catch (error) {

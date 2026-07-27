@@ -8,6 +8,7 @@ import {
   isVisibleCharacter,
   padBounds,
 } from "./domain";
+import { showTargetIndicators } from "./target-indicator";
 
 export type FocusFailureReason =
   "SCENE_UNAVAILABLE" | "NOT_FOUND" | "SDK_ERROR";
@@ -38,6 +39,7 @@ async function getReadySceneItems(): Promise<
 export async function focusViewportOnCharacterItems(
   itemsOrIds: readonly Item[] | readonly string[],
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
+  targetIndicatorEnabled = true,
 ): Promise<FocusResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -60,6 +62,11 @@ export async function focusViewportOnCharacterItems(
 
     const ids = characterItems.map((item) => item.id);
     const bounds = await OBR.scene.items.getItemBounds(ids);
+    try {
+      await showTargetIndicators(characterItems, targetIndicatorEnabled);
+    } catch (error) {
+      console.error("Where am I? target indicator setup failed.", error);
+    }
     if (ids.length === 1) {
       const [viewportWidth, viewportHeight] = await Promise.all([
         OBR.viewport.getWidth(),
@@ -87,21 +94,32 @@ export async function focusViewportOnCharacterItems(
 export async function focusViewportOnPlayerCharacters(
   targetPlayerId: string,
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
+  targetIndicatorEnabled = true,
+  targetCharacterId?: string,
 ): Promise<FocusResult> {
   const scene = await getReadySceneItems();
   if (!scene.ok) {
     return scene;
   }
 
+  const ownedCharacters = filterVisibleOwnedCharacters(
+    scene.items,
+    targetPlayerId,
+  );
+  const targets = targetCharacterId
+    ? ownedCharacters.filter((item) => item.id === targetCharacterId)
+    : ownedCharacters;
   return focusViewportOnCharacterItems(
-    filterVisibleOwnedCharacters(scene.items, targetPlayerId),
+    targets,
     singleTokenZoom,
+    targetIndicatorEnabled,
   );
 }
 
 export async function focusViewportOnPartyCharacters(
   playerIds: ReadonlySet<string>,
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
+  targetIndicatorEnabled = true,
 ): Promise<FocusResult> {
   const scene = await getReadySceneItems();
   if (!scene.ok) {
@@ -111,5 +129,6 @@ export async function focusViewportOnPartyCharacters(
   return focusViewportOnCharacterItems(
     filterVisiblePartyCharacters(scene.items, playerIds),
     singleTokenZoom,
+    targetIndicatorEnabled,
   );
 }

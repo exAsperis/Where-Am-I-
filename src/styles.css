@@ -16,7 +16,7 @@
   --color-primary: #6c4cff;
   --color-primary-text: #ffffff;
   --color-border: color-mix(in srgb, var(--color-text) 18%, transparent);
-  background: var(--color-background);
+  background: transparent;
   color: var(--color-text);
 }
 
@@ -24,11 +24,18 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  min-height: 100%;
+  background: transparent;
+}
+
 body {
   min-width: 0;
   margin: 0;
-  background: var(--color-background);
   color: var(--color-text);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 button,
@@ -40,7 +47,14 @@ input {
   display: grid;
   gap: 14px;
   min-width: 0;
+  min-height: 100%;
   padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 12%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-background) 82%, transparent);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
 }
 
 .header {
@@ -272,12 +286,22 @@ h2 {
   list-style: none;
 }
 
+.player-group {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
 .character-list {
   display: grid;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.character-list--gm {
+  padding-left: 14px;
 }
 
 .character-row {
@@ -288,6 +312,36 @@ h2 {
   padding: 6px 8px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
+}
+
+.character-row--gm {
+  background: var(--color-surface);
+}
+
+.character-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  width: 112px;
+}
+
+.character-disclosure {
+  min-width: 0;
+}
+
+.character-disclosure summary {
+  width: fit-content;
+  margin-left: 9px;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.character-disclosure summary:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
 }
 
 .player-row {

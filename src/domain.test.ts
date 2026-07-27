@@ -4,7 +4,9 @@ import {
   calculatePadding,
   createBoundsForZoom,
   filterVisibleOwnedCharacters,
+  formatCharacterName,
   formatPlayerName,
+  groupVisibleCharactersByPlayer,
   groupPlayerConnections,
   normalizeZoomScale,
   padBounds,
@@ -65,6 +67,21 @@ describe("character ownership", () => {
 });
 
 describe("party presentation", () => {
+  it("groups visible characters under their owning player", () => {
+    const grouped = groupVisibleCharactersByPlayer(characters);
+    expect(grouped.get("player-1")?.map((item) => item.id)).toEqual([
+      "owned-visible",
+    ]);
+    expect(grouped.get("player-2")?.map((item) => item.id)).toEqual([
+      "other-visible",
+    ]);
+  });
+
+  it("uses token names with an unnamed fallback", () => {
+    expect(formatCharacterName(" Mira ")).toBe("Mira");
+    expect(formatCharacterName("  ")).toBe("Unnamed character");
+  });
+
   it("groups duplicate connections by stable player ID and excludes GMs", () => {
     const players: PartyPlayer[] = [
       {

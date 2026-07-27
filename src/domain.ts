@@ -46,6 +46,25 @@ export function filterVisiblePartyCharacters<T extends CharacterItem>(
   );
 }
 
+export function groupVisibleCharactersByPlayer<T extends CharacterItem>(
+  items: readonly T[],
+): Map<string, T[]> {
+  const charactersByPlayer = new Map<string, T[]>();
+  for (const item of items) {
+    if (!isVisibleCharacter(item)) {
+      continue;
+    }
+    const characters = charactersByPlayer.get(item.createdUserId) ?? [];
+    characters.push(item);
+    charactersByPlayer.set(item.createdUserId, characters);
+  }
+  return charactersByPlayer;
+}
+
+export function formatCharacterName(characterName: string): string {
+  return characterName.trim() || "Unnamed character";
+}
+
 export function groupPlayerConnections<T extends PartyPlayer>(
   players: readonly T[],
 ): T[] {

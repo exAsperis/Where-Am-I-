@@ -18,8 +18,12 @@ const sdk = vi.hoisted(() => ({
     getHeight: vi.fn(),
   },
 }));
+const indicator = vi.hoisted(() => ({
+  showTargetIndicators: vi.fn(),
+}));
 
 vi.mock("@owlbear-rodeo/sdk", () => ({ default: sdk }));
+vi.mock("./target-indicator", () => indicator);
 
 import {
   focusViewportOnCharacterItems,
@@ -61,6 +65,7 @@ describe("viewport focus service", () => {
     sdk.viewport.animateToBounds.mockResolvedValue(undefined);
     sdk.viewport.getWidth.mockResolvedValue(800);
     sdk.viewport.getHeight.mockResolvedValue(600);
+    indicator.showTargetIndicators.mockResolvedValue(undefined);
   });
 
   it("defaults to 50% zoom for a single character", async () => {
@@ -75,6 +80,42 @@ describe("viewport focus service", () => {
       center: { x: 50, y: 50 },
     });
     expect(sdk.scene.grid.getDpi).not.toHaveBeenCalled();
+    expect(indicator.showTargetIndicators).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: "one" })],
+      true,
+    );
+  });
+
+  it("focuses a requested token only when it is visible and owned by the target player", async () => {
+    sdk.scene.items.getItems.mockResolvedValue([
+      item("owned"),
+      item("other", { createdUserId: "player-2" }),
+      item("hidden", { visible: false }),
+    ]);
+
+    await expect(
+      focusViewportOnPlayerCharacters("player-1", 0.5, true, "owned"),
+    ).resolves.toEqual({ ok: true, itemCount: 1 });
+    await expect(
+      focusViewportOnPlayerCharacters("player-1", 0.5, true, "other"),
+    ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
+    await expect(
+      focusViewportOnPlayerCharacters("player-1", 0.5, true, "hidden"),
+    ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
+  });
+
+  it("still focuses when target indicator setup fails", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    indicator.showTargetIndicators.mockRejectedValueOnce(
+      new Error("local scene unavailable"),
+    );
+
+    await expect(focusViewportOnCharacterItems([item("one")])).resolves.toEqual(
+      { ok: true, itemCount: 1 },
+    );
+    expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalled();
+    errorLog.mockRestore();
   });
 
   it("frames all visible characters owned by the target player", async () => {

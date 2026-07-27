@@ -5,6 +5,7 @@ import { FOCUS_COMMAND_MAX_AGE_MS, MAX_RECENT_REQUEST_IDS } from "./constants";
 export interface FocusCommand {
   type: "FOCUS_OWNED_CHARACTERS";
   targetPlayerId: string;
+  targetCharacterId?: string;
   requestId: string;
   sentAt: number;
 }
@@ -32,6 +33,9 @@ export function isFocusCommand(value: unknown): value is FocusCommand {
     command.type === "FOCUS_OWNED_CHARACTERS" &&
     typeof command.targetPlayerId === "string" &&
     command.targetPlayerId.length > 0 &&
+    (command.targetCharacterId === undefined ||
+      (typeof command.targetCharacterId === "string" &&
+        command.targetCharacterId.length > 0)) &&
     typeof command.requestId === "string" &&
     command.requestId.length > 0 &&
     typeof command.sentAt === "number" &&
@@ -107,10 +111,14 @@ export function routeFocusCommand(options: {
   return { execute: true, command: data };
 }
 
-export function createFocusCommand(targetPlayerId: string): FocusCommand {
+export function createFocusCommand(
+  targetPlayerId: string,
+  targetCharacterId?: string,
+): FocusCommand {
   return {
     type: "FOCUS_OWNED_CHARACTERS",
     targetPlayerId,
+    ...(targetCharacterId ? { targetCharacterId } : {}),
     requestId: crypto.randomUUID(),
     sentAt: Date.now(),
   };

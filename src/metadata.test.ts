@@ -18,6 +18,7 @@ import {
   readRoomSettings,
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
+  setPlayerTargetIndicatorEnabled,
 } from "./metadata";
 
 describe("metadata settings", () => {
@@ -29,6 +30,7 @@ describe("metadata settings", () => {
   it("defaults missing or malformed settings to enabled", () => {
     expect(readPlayerSettings({}).autoFocusEnabled).toBe(true);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
+    expect(readPlayerSettings({}).targetIndicatorEnabled).toBe(true);
     expect(
       readPlayerSettings({
         [PLAYER_SETTINGS_METADATA_KEY]: { autoFocusEnabled: "yes" },
@@ -53,9 +55,14 @@ describe("metadata settings", () => {
         [PLAYER_SETTINGS_METADATA_KEY]: {
           autoFocusEnabled: false,
           singleTokenZoom: 0.75,
+          targetIndicatorEnabled: false,
         },
       }),
-    ).toEqual({ autoFocusEnabled: false, singleTokenZoom: 0.75 });
+    ).toEqual({
+      autoFocusEnabled: false,
+      singleTokenZoom: 0.75,
+      targetIndicatorEnabled: false,
+    });
     expect(
       readRoomSettings({
         [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: false },
@@ -68,6 +75,7 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
+        targetIndicatorEnabled: false,
       },
     });
 
@@ -76,6 +84,7 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
+        targetIndicatorEnabled: false,
       },
     });
 
@@ -84,6 +93,16 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
         singleTokenZoom: 1,
+        targetIndicatorEnabled: false,
+      },
+    });
+
+    await setPlayerTargetIndicatorEnabled(true);
+    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
+      [PLAYER_SETTINGS_METADATA_KEY]: {
+        autoFocusEnabled: true,
+        singleTokenZoom: 0.75,
+        targetIndicatorEnabled: true,
       },
     });
   });

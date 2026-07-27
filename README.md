@@ -24,11 +24,13 @@ Owlbear Rodeo extension bar.
 - **Find me now** frames all your visible characters together.
 - **Single-character zoom** controls how closely one selected character is
   framed. It defaults to 50% and accepts 10–200%.
+- **Show target indicators** displays a private orange circle around each
+  character being found. It defaults to enabled.
 - If you own several visible characters, **My characters** lets you focus one
   named token at a time.
 
-Your automatic-focus and zoom settings are saved to your Owlbear Rodeo player
-metadata.
+Your automatic-focus, zoom, and target-indicator settings are saved to your
+Owlbear Rodeo player metadata.
 
 ### GM controls
 
@@ -37,11 +39,15 @@ metadata.
 - **Send to character** asks the selected player's clients to focus their
   character.
 - **View character** frames one player's visible characters in your viewport.
+- For players with multiple characters, expand **Characters (N)** to send or
+  view one named token.
 - **View whole party** frames the visible characters owned by connected
   players in your viewport.
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
-saved zoom setting, while remotely focused players use their own settings.
+saved zoom and target-indicator settings, while remotely focused players use
+their own settings. The panel grows to fit additional rows up to its maximum
+height, then scrolls for larger parties.
 
 ### Character ownership and privacy
 
@@ -53,6 +59,9 @@ bounds with extra scene-grid padding.
 Each client's viewport acts independently. A player's local action never moves
 another client's viewport, and a GM moves a player's viewport only by
 explicitly sending that player a focus command.
+
+Target animations use temporary client-local scene items. Only the person whose
+viewport is moving sees them; they never become shared scene content.
 
 The extension has no backend, accounts, analytics, or external data storage.
 Preferences use namespaced Owlbear Rodeo player metadata, global enablement
@@ -95,8 +104,9 @@ pnpm run build
 ```
 
 Do not use a local browser preview for Owlbear integration in this workspace.
-Deploy an explicitly authorized build, verify its public manifest and assets,
-and then test through the hosted manifest in Owlbear Rodeo.
+For a requested release, a passing complete local release gate authorizes the
+documented commit, push, deployment, and public-asset verification workflow.
+Then test through the hosted manifest in Owlbear Rodeo.
 
 ### Extension-store publication
 
@@ -134,6 +144,16 @@ connection:
 17. A multi-token player focuses each named token individually.
 18. GM player rows use Owlbear player names rather than token names.
 19. The extension bar and manifest use the orange/blue logo artwork.
+20. Expand and collapse GM character lists, then use each token's **Send** and
+    **View** actions.
+21. Confirm one private target circle per focused token for automatic, manual,
+    remote, player, GM, multi-token, and whole-party focus.
+22. Disable indicators independently on GM and player clients, reload, and
+    confirm each preference persists.
+23. Trigger another focus during an animation and confirm the previous
+    indicators are removed.
+24. Confirm the translucent blurred panel grows for four players (including
+    two expanded two-character players) and scrolls for larger parties.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check
