@@ -186,11 +186,14 @@ describe("target indicator geometry", () => {
         type: "SHAPE",
         layer: "CONTROL",
         disableHit: true,
+        position: { x: 60, y: 120 },
         width: 4_000,
         height: 4_000,
+        style: expect.objectContaining({ strokeWidth: 12 }),
       }),
     ]);
     expect(sdk.scene.local.updateItems).toHaveBeenCalled();
+    expect(sdk.localItems[0]?.position).toEqual({ x: 60, y: 120 });
 
     await showTargetIndicators([character], true);
     expect(sdk.scene.local.deleteItems).toHaveBeenCalledWith([
@@ -228,7 +231,7 @@ describe("target indicator geometry", () => {
       expect.objectContaining({
         width: 6_000,
         height: 6_000,
-        position: { x: -2_600, y: -2_500 },
+        position: { x: 400, y: 500 },
       }),
     ]);
     expect(sdk.scene.local.updateItems).toHaveBeenCalledWith(

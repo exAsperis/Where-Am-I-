@@ -12,6 +12,7 @@ import {
   TARGET_INDICATOR_INITIAL_SCALE,
   TARGET_INDICATOR_METADATA_KEY,
   TARGET_INDICATOR_SHRINK_MS,
+  TARGET_INDICATOR_STROKE_WIDTH,
 } from "./constants";
 
 export interface IndicatorGeometry {
@@ -130,10 +131,7 @@ async function animateIndicators(
             }
             item.width = frame.diameter;
             item.height = frame.diameter;
-            item.position = {
-              x: geometry.center.x - frame.diameter / 2,
-              y: geometry.center.y - frame.diameter / 2,
-            };
+            item.position = { ...geometry.center };
             if (fading) {
               item.style.strokeOpacity = frame.opacity;
             }
@@ -186,10 +184,7 @@ export async function showTargetIndicators(
     const shapes = targets.map(({ geometry, item }) =>
       buildShape()
         .name(`Where am I? target: ${item.name}`)
-        .position({
-          x: geometry.center.x - geometry.initialDiameter / 2,
-          y: geometry.center.y - geometry.initialDiameter / 2,
-        })
+        .position({ ...geometry.center })
         .width(geometry.initialDiameter)
         .height(geometry.initialDiameter)
         .shapeType("CIRCLE")
@@ -197,7 +192,7 @@ export async function showTargetIndicators(
         .fillOpacity(0)
         .strokeColor(TARGET_INDICATOR_COLOR)
         .strokeOpacity(1)
-        .strokeWidth(6)
+        .strokeWidth(TARGET_INDICATOR_STROKE_WIDTH)
         .locked(true)
         .disableHit(true)
         .disableAutoZIndex(true)
