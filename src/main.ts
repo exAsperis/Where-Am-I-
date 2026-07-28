@@ -12,7 +12,6 @@ import {
   filterVisibleOwnedCharacters,
   formatCharacterName,
   formatPlayerName,
-  groupVisibleCharactersByPlayer,
   groupPlayerConnections,
   normalizeZoomScale,
 } from "./domain";
@@ -126,12 +125,6 @@ class PopoverController {
     this.#disposeCallbacks.push(
       OBR.scene.items.onChange((items) => {
         this.#items = items;
-        void this.#resizePlayerPopover().catch((error: unknown) => {
-          console.error(
-            "Where am I? could not resize the player popover.",
-            error,
-          );
-        });
         this.#render();
       }),
       OBR.scene.onReadyChange((ready) => {
@@ -144,7 +137,7 @@ class PopoverController {
       }),
     );
     await OBR.action.setWidth(POPOVER_WIDTH);
-    await this.#resizePlayerPopover();
+    await OBR.action.setHeight(PLAYER_POPOVER_MIN_HEIGHT);
   }
 
   async #startGmView(): Promise<void> {
@@ -158,16 +151,10 @@ class PopoverController {
     this.#disposeCallbacks.push(
       OBR.party.onChange((players) => {
         this.#players = groupPlayerConnections(players);
-        void this.#resizeGmPopover().catch((error: unknown) => {
-          console.error("Where am I? could not resize the GM popover.", error);
-        });
         this.#render();
       }),
       OBR.scene.items.onChange((items) => {
         this.#items = items;
-        void this.#resizeGmPopover().catch((error: unknown) => {
-          console.error("Where am I? could not resize the GM popover.", error);
-        });
         this.#render();
       }),
       OBR.scene.onReadyChange((ready) => {
@@ -180,7 +167,7 @@ class PopoverController {
       }),
     );
     await OBR.action.setWidth(POPOVER_WIDTH);
-    await this.#resizeGmPopover();
+    await OBR.action.setHeight(GM_POPOVER_MIN_HEIGHT);
   }
 
   async #getSceneItems(): Promise<Item[]> {
@@ -193,11 +180,6 @@ class PopoverController {
   async #refreshItems(): Promise<void> {
     try {
       this.#items = await this.#getSceneItems();
-      if (this.#role === "GM") {
-        await this.#resizeGmPopover();
-      } else {
-        await this.#resizePlayerPopover();
-      }
       this.#render();
     } catch (error) {
       console.error("Where am I? could not refresh character labels.", error);
@@ -205,17 +187,7 @@ class PopoverController {
   }
 
   async #resizeGmPopover(): Promise<void> {
-    const charactersByPlayer = groupVisibleCharactersByPlayer(this.#items);
-    const expandedHeight = this.#players.reduce((total, player) => {
-      const count = charactersByPlayer.get(player.id)?.length ?? 0;
-      return (
-        total +
-        (this.#expandedPlayerIds.has(player.id) && count > 1
-          ? 38 + count * 45
-          : 0)
-      );
-    }, 0);
-    const desiredHeight = 332 + this.#players.length * 66 + expandedHeight;
+    const desiredHeight = this.#measureRenderedHeight(GM_POPOVER_MIN_HEIGHT);
     await OBR.action.setHeight(
       Math.min(
         GM_POPOVER_MAX_HEIGHT,
@@ -225,18 +197,20 @@ class PopoverController {
   }
 
   async #resizePlayerPopover(): Promise<void> {
-    const characterCount = filterVisibleOwnedCharacters(
-      this.#items,
-      OBR.player.id,
-    ).length;
-    const desiredHeight =
-      350 + (characterCount > 1 ? 42 + characterCount * 45 : 0);
+    const desiredHeight = this.#measureRenderedHeight(
+      PLAYER_POPOVER_MIN_HEIGHT,
+    );
     await OBR.action.setHeight(
       Math.min(
         PLAYER_POPOVER_MAX_HEIGHT,
         Math.max(PLAYER_POPOVER_MIN_HEIGHT, desiredHeight),
       ),
     );
+  }
+
+  #measureRenderedHeight(fallbackHeight: number): number {
+    const app = this.#root.querySelector<HTMLElement>(".app");
+    return app ? Math.ceil(app.scrollHeight) + 2 : fallbackHeight;
   }
 
   #applyTheme(theme: Theme): void {
@@ -286,6 +260,13 @@ class PopoverController {
     app.append(status);
 
     this.#root.append(app);
+    const resize =
+      this.#role === "GM"
+        ? this.#resizeGmPopover()
+        : this.#resizePlayerPopover();
+    void resize.catch((error: unknown) => {
+      console.error("Where am I? could not resize the popover.", error);
+    });
   }
 
   #renderPlayerControls(): HTMLElement {

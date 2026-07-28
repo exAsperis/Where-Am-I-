@@ -47,7 +47,6 @@ input {
   display: grid;
   gap: 14px;
   min-width: 0;
-  min-height: 100%;
   padding: 16px;
   background: transparent;
 }
