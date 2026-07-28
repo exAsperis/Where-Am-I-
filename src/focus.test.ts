@@ -104,6 +104,18 @@ describe("viewport focus service", () => {
     ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
   });
 
+  it("can explicitly locate a hidden Character-layer token for the GM", async () => {
+    await expect(
+      focusViewportOnCharacterItems(
+        [item("hidden", { visible: false })],
+        0.5,
+        true,
+        true,
+      ),
+    ).resolves.toEqual({ ok: true, itemCount: 1 });
+    expect(sdk.scene.items.getItemBounds).toHaveBeenCalledWith(["hidden"]);
+  });
+
   it("still focuses when target indicator setup fails", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
     indicator.showTargetIndicators.mockRejectedValueOnce(

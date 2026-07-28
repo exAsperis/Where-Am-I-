@@ -1,4 +1,10 @@
-import type { BoundingBox, Item, Player, Vector2 } from "@owlbear-rodeo/sdk";
+import type {
+  BoundingBox,
+  Image,
+  Item,
+  Player,
+  Vector2,
+} from "@owlbear-rodeo/sdk";
 
 import {
   DEFAULT_SINGLE_TOKEN_ZOOM,
@@ -14,6 +20,20 @@ export interface CharacterItem {
   name: string;
 }
 
+export interface CharacterDisplay {
+  imageUrl?: string;
+  tokenText?: string;
+  characterName: string;
+}
+
+function isImageToken(item: Item): item is Image {
+  return item.type === "IMAGE";
+}
+
+export function isCharacter(item: Pick<Item, "layer">): boolean {
+  return item.layer === "CHARACTER";
+}
+
 export interface PartyPlayer {
   id: string;
   connectionId: string;
@@ -25,7 +45,23 @@ export interface PartyPlayer {
 export function isVisibleCharacter(
   item: Pick<Item, "layer" | "visible">,
 ): boolean {
-  return item.layer === "CHARACTER" && item.visible;
+  return isCharacter(item) && item.visible;
+}
+
+export function filterCharacterTokens<T extends Pick<Item, "layer">>(
+  items: readonly T[],
+): T[] {
+  return items.filter(isCharacter);
+}
+
+export function getCharacterDisplay(item: Item): CharacterDisplay {
+  const tokenText = isImageToken(item) ? item.text.plainText.trim() : "";
+  const imageUrl = isImageToken(item) ? item.image.url.trim() : "";
+  return {
+    ...(imageUrl ? { imageUrl } : {}),
+    ...(tokenText ? { tokenText } : {}),
+    characterName: formatCharacterName(item.name),
+  };
 }
 
 export function filterVisibleOwnedCharacters<T extends CharacterItem>(

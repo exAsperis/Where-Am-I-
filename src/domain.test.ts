@@ -1,11 +1,14 @@
+import type { Item } from "@owlbear-rodeo/sdk";
 import { describe, expect, it } from "vitest";
 
 import {
   calculatePadding,
   createBoundsForZoom,
+  filterCharacterTokens,
   filterVisibleOwnedCharacters,
   formatCharacterName,
   formatPlayerName,
+  getCharacterDisplay,
   groupVisibleCharactersByPlayer,
   groupPlayerConnections,
   normalizeZoomScale,
@@ -64,6 +67,14 @@ describe("character ownership", () => {
       expect.objectContaining({ id: "owned-prop" }),
     );
   });
+
+  it("lists all Character-layer tokens regardless of visibility or ownership", () => {
+    expect(filterCharacterTokens(characters).map((item) => item.id)).toEqual([
+      "owned-visible",
+      "owned-hidden",
+      "other-visible",
+    ]);
+  });
 });
 
 describe("party presentation", () => {
@@ -80,6 +91,31 @@ describe("party presentation", () => {
   it("uses token names with an unnamed fallback", () => {
     expect(formatCharacterName(" Mira ")).toBe("Mira");
     expect(formatCharacterName("  ")).toBe("Unnamed character");
+  });
+
+  it("extracts image, associated token text, and character name", () => {
+    const image = {
+      ...characters[0],
+      type: "IMAGE",
+      image: {
+        url: "https://example.com/mira.png",
+        width: 100,
+        height: 100,
+        mime: "image/png",
+      },
+      text: { plainText: "  Mira the Bold  " },
+    } as unknown as Item;
+    expect(getCharacterDisplay(image)).toEqual({
+      imageUrl: "https://example.com/mira.png",
+      tokenText: "Mira the Bold",
+      characterName: "Mira",
+    });
+  });
+
+  it("omits blank associated text and unavailable artwork", () => {
+    expect(getCharacterDisplay(characters[0] as Item)).toEqual({
+      characterName: "Mira",
+    });
   });
 
   it("groups duplicate connections by stable player ID and excludes GMs", () => {

@@ -1,7 +1,7 @@
 # Where am I?
 
 Where am I? is an [Owlbear Rodeo](https://www.owlbear.rodeo/) extension that
-helps players and GMs find player-owned characters on the current scene.
+helps players and GMs locate player-owned characters on the current scene.
 
 ## For players and GMs
 
@@ -19,9 +19,9 @@ Owlbear Rodeo extension bar.
 
 ### Player controls
 
-- **Automatically find my character** focuses your character when the
+- **Automatically locate my character** focuses your character when the
   extension starts and when a new scene becomes ready. It defaults to enabled.
-- **Find me now** frames all your visible characters together.
+- **Locate me now** frames all your visible characters together.
 - **Single-character zoom** controls how closely one selected character is
   framed. It defaults to 50% and accepts 10–200%.
 - **Show target indicators** displays a private orange circle around each
@@ -38,10 +38,10 @@ Owlbear Rodeo player metadata.
   behavior for the room.
 - **Send to character** asks the selected player's clients to focus their
   character.
-- **View character** frames one player's visible characters in your viewport.
+- **Locate character** frames one player's visible characters in your viewport.
 - For players with multiple characters, expand **Characters (N)** to send or
-  view one named token.
-- **View whole party** frames the visible characters owned by connected
+  locate one named token.
+- **Locate whole party** frames the visible characters owned by connected
   players in your viewport.
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
@@ -130,7 +130,7 @@ connection:
 3. Player with automatic behavior disabled joins.
 4. Enabled player changes scenes.
 5. Disabled player changes scenes.
-6. Player presses **Find me now**.
+6. Player presses **Locate me now**.
 7. One player's local action does not affect another player.
 8. GM disables and re-enables the feature without changing player preferences.
 9. GM remotely focuses one player without moving other players.
@@ -145,7 +145,7 @@ connection:
 18. GM player rows use Owlbear player names rather than token names.
 19. The extension bar and manifest use the orange/blue logo artwork.
 20. Expand and collapse GM character lists, then use each token's **Send** and
-    **View** actions.
+    **Locate** actions.
 21. Confirm one private target circle per focused token for automatic, manual,
     remote, player, GM, multi-token, and whole-party focus.
 22. Disable indicators independently on GM and player clients, reload, and

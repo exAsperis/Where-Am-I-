@@ -5,6 +5,7 @@ import {
   createBoundsForZoom,
   filterVisibleOwnedCharacters,
   filterVisiblePartyCharacters,
+  isCharacter,
   isVisibleCharacter,
   padBounds,
 } from "./domain";
@@ -40,6 +41,7 @@ export async function focusViewportOnCharacterItems(
   itemsOrIds: readonly Item[] | readonly string[],
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   targetIndicatorEnabled = true,
+  includeHidden = false,
 ): Promise<FocusResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -54,7 +56,9 @@ export async function focusViewportOnCharacterItems(
               Array.from(itemsOrIds as readonly string[]),
             )
           : (itemsOrIds as readonly Item[]);
-    const characterItems = items.filter(isVisibleCharacter);
+    const characterItems = items.filter(
+      includeHidden ? isCharacter : isVisibleCharacter,
+    );
 
     if (characterItems.length === 0) {
       return { ok: false, reason: "NOT_FOUND" };

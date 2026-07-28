@@ -10,8 +10,10 @@ import {
 } from "./constants";
 import {
   filterVisibleOwnedCharacters,
+  filterCharacterTokens,
   formatCharacterName,
   formatPlayerName,
+  getCharacterDisplay,
   groupPlayerConnections,
   normalizeZoomScale,
 } from "./domain";
@@ -32,6 +34,11 @@ import {
   setPlayerTargetIndicatorEnabled,
 } from "./metadata";
 import { createFocusCommand } from "./remote-focus";
+import {
+  getGmCharacterToken,
+  moveCharacterTokenToViewportCenter,
+  toggleCharacterTokenVisibility,
+} from "./token-actions";
 import "./styles.css";
 import { RELEASE_VERSION } from "./version";
 
@@ -53,6 +60,7 @@ class PopoverController {
   #players: Player[] = [];
   #items: Item[] = [];
   readonly #expandedPlayerIds = new Set<string>();
+  #allCharactersExpanded = false;
   #busyAction: string | undefined;
   #status: Status | undefined;
 
@@ -255,8 +263,8 @@ class PopoverController {
     status.textContent =
       this.#status?.message ??
       (this.#role === "GM"
-        ? "Choose a local view or send a player to their character."
-        : "Only your local viewport moves when you find yourself.");
+        ? "Choose a local location or send a player to their character."
+        : "Only your local viewport moves when you locate yourself.");
     app.append(status);
 
     this.#root.append(app);
@@ -277,20 +285,20 @@ class PopoverController {
     controls.append(this.#createIndicatorToggle());
 
     const toggle = this.#createToggle(
-      "Automatically find my character",
+      "Automatically locate my character",
       this.#autoFocusEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updatePlayerPreference(enabled),
     );
     controls.append(toggle);
 
-    const findButton = this.#createButton(
-      this.#busyAction === "find-self" ? "Finding…" : "Find me now",
+    const locateButton = this.#createButton(
+      this.#busyAction === "locate-self" ? "Locating…" : "Locate me now",
       "primary",
       !this.#globalEnabled || this.#busyAction !== undefined,
-      () => void this.#findSelf(),
+      () => void this.#locateSelf(),
     );
-    controls.append(findButton);
+    controls.append(locateButton);
 
     const ownedCharacters = filterVisibleOwnedCharacters(
       this.#items,
@@ -309,19 +317,18 @@ class PopoverController {
       for (const character of ownedCharacters) {
         const row = document.createElement("li");
         row.className = "character-row";
-        const name = document.createElement("span");
-        name.className = "player-label";
-        name.textContent = formatCharacterName(character.name);
+        const identity = this.#createCharacterIdentity(character);
+        const characterLabel = formatCharacterName(character.name);
         row.append(
-          name,
+          identity,
           this.#createButton(
             this.#busyAction === `character-${character.id}`
-              ? "Finding…"
-              : "Find",
+              ? "Locating…"
+              : "Locate",
             "small",
             !this.#globalEnabled || this.#busyAction !== undefined,
-            () => void this.#findCharacter(character.id),
-            `Find ${name.textContent}`,
+            () => void this.#locateCharacter(character.id),
+            `Locate ${characterLabel}`,
           ),
         );
         list.append(row);
@@ -380,14 +387,86 @@ class PopoverController {
     controls.append(
       this.#createButton(
         this.#busyAction === "whole-party"
-          ? "Framing party…"
-          : "View whole party",
+          ? "Locating party…"
+          : "Locate whole party",
         "secondary",
         this.#busyAction !== undefined || this.#players.length === 0,
-        () => void this.#viewWholeParty(),
+        () => void this.#locateWholeParty(),
       ),
     );
+    controls.append(this.#renderAllCharacterTokens());
     return controls;
+  }
+
+  #renderAllCharacterTokens(): HTMLElement {
+    const characters = filterCharacterTokens(this.#items);
+    const details = document.createElement("details");
+    details.className = "character-disclosure character-disclosure--all";
+    details.open = this.#allCharactersExpanded;
+
+    const summary = document.createElement("summary");
+    summary.textContent = `All character tokens (${characters.length})`;
+    details.append(summary);
+
+    if (characters.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No character tokens are in the current scene.";
+      details.append(empty);
+    } else {
+      const list = document.createElement("ul");
+      list.className = "character-list";
+      for (const character of characters) {
+        const row = document.createElement("li");
+        row.className = "character-row character-row--gm character-row--all";
+        const display = this.#createCharacterIdentity(character);
+        const actions = document.createElement("div");
+        actions.className = "character-actions character-actions--all";
+        const label = getCharacterDisplay(character).characterName;
+        actions.append(
+          this.#createButton(
+            this.#busyAction === `locate-token-${character.id}`
+              ? "Locating…"
+              : "Locate",
+            "small",
+            this.#busyAction !== undefined,
+            () => void this.#locateToken(character.id),
+            `Locate ${label}`,
+          ),
+          this.#createButton(
+            this.#busyAction === `visibility-token-${character.id}`
+              ? "Updating…"
+              : character.visible
+                ? "Hide"
+                : "Show",
+            "small",
+            this.#busyAction !== undefined,
+            () => void this.#toggleTokenVisibility(character.id),
+            `${character.visible ? "Hide" : "Show"} ${label}`,
+          ),
+          this.#createButton(
+            this.#busyAction === `move-token-${character.id}`
+              ? "Moving…"
+              : "Move",
+            "small",
+            this.#busyAction !== undefined,
+            () => void this.#moveTokenToViewportCenter(character.id),
+            `Move ${label} to the center of the viewport`,
+          ),
+        );
+        row.append(display, actions);
+        list.append(row);
+      }
+      details.append(list);
+    }
+
+    details.addEventListener("toggle", () => {
+      this.#allCharactersExpanded = details.open;
+      void this.#resizeGmPopover().catch((error: unknown) => {
+        console.error("Where am I? could not resize the GM popover.", error);
+      });
+    });
+    return details;
   }
 
   #renderPlayerRow(player: Player): HTMLLIElement {
@@ -419,12 +498,12 @@ class PopoverController {
         () => void this.#sendToPlayer(player.id),
       ),
       this.#createButton(
-        this.#busyAction === `view-${player.id}`
-          ? "Viewing…"
-          : "View character",
+        this.#busyAction === `locate-${player.id}`
+          ? "Locating…"
+          : "Locate character",
         "small",
         this.#busyAction !== undefined,
-        () => void this.#viewPlayer(player.id),
+        () => void this.#locatePlayer(player.id),
       ),
     );
 
@@ -445,9 +524,8 @@ class PopoverController {
       for (const character of characters) {
         const characterRow = document.createElement("li");
         characterRow.className = "character-row character-row--gm";
-        const name = document.createElement("span");
-        name.className = "player-label";
-        name.textContent = formatCharacterName(character.name);
+        const name = this.#createCharacterIdentity(character);
+        const characterLabel = formatCharacterName(character.name);
         const characterActions = document.createElement("div");
         characterActions.className = "character-actions";
         characterActions.append(
@@ -458,16 +536,16 @@ class PopoverController {
             "small",
             !this.#globalEnabled || this.#busyAction !== undefined,
             () => void this.#sendToPlayer(player.id, character.id),
-            `Send ${name.textContent} to ${formatPlayerName(player.id, player.name)}`,
+            `Send ${characterLabel} to ${formatPlayerName(player.id, player.name)}`,
           ),
           this.#createButton(
-            this.#busyAction === `view-${player.id}-${character.id}`
-              ? "Viewing…"
-              : "View",
+            this.#busyAction === `locate-${player.id}-${character.id}`
+              ? "Locating…"
+              : "Locate",
             "small",
             this.#busyAction !== undefined,
-            () => void this.#viewPlayer(player.id, character.id),
-            `View ${name.textContent}`,
+            () => void this.#locatePlayer(player.id, character.id),
+            `Locate ${characterLabel}`,
           ),
         );
         characterRow.append(name, characterActions);
@@ -487,6 +565,42 @@ class PopoverController {
       group.append(details);
     }
     return group;
+  }
+
+  #createCharacterIdentity(character: Item): HTMLElement {
+    const display = getCharacterDisplay(character);
+    const identity = document.createElement("div");
+    identity.className = "character-identity";
+
+    if (display.imageUrl) {
+      const image = document.createElement("img");
+      image.className = "character-thumbnail";
+      image.src = display.imageUrl;
+      image.alt = "";
+      identity.append(image);
+    } else {
+      const placeholder = document.createElement("span");
+      placeholder.className =
+        "character-thumbnail character-thumbnail--placeholder";
+      placeholder.textContent = "?";
+      placeholder.setAttribute("aria-hidden", "true");
+      identity.append(placeholder);
+    }
+
+    const labels = document.createElement("span");
+    labels.className = "character-labels";
+    if (display.tokenText) {
+      const tokenText = document.createElement("span");
+      tokenText.className = "character-token-text";
+      tokenText.textContent = display.tokenText;
+      labels.append(tokenText);
+    }
+    const characterName = document.createElement("span");
+    characterName.className = "character-name";
+    characterName.textContent = display.characterName;
+    labels.append(characterName);
+    identity.append(labels);
+    return identity;
   }
 
   #createToggle(
@@ -599,8 +713,8 @@ class PopoverController {
       this.#autoFocusEnabled = enabled;
       this.#status = {
         message: enabled
-          ? "Automatic finding is enabled."
-          : "Automatic finding is disabled. Find me now remains available.",
+          ? "Automatic locating is enabled."
+          : "Automatic locating is disabled. Locate me now remains available.",
         tone: "success",
       };
     });
@@ -637,14 +751,14 @@ class PopoverController {
       this.#status = {
         message: enabled
           ? "Player focusing is enabled."
-          : "Player focusing is disabled. GM-local views remain available.",
+          : "Player focusing is disabled. GM-local locating remains available.",
         tone: "success",
       };
     });
   }
 
-  async #findSelf(): Promise<void> {
-    await this.#runAction("find-self", async () => {
+  async #locateSelf(): Promise<void> {
+    await this.#runAction("locate-self", async () => {
       if (!(await this.#confirmGlobalEnabled())) {
         return;
       }
@@ -658,7 +772,7 @@ class PopoverController {
     });
   }
 
-  async #findCharacter(characterId: string): Promise<void> {
+  async #locateCharacter(characterId: string): Promise<void> {
     await this.#runAction(`character-${characterId}`, async () => {
       if (!(await this.#confirmGlobalEnabled())) {
         return;
@@ -699,13 +813,13 @@ class PopoverController {
     });
   }
 
-  async #viewPlayer(
+  async #locatePlayer(
     playerId: string,
     targetCharacterId?: string,
   ): Promise<void> {
     const action = targetCharacterId
-      ? `view-${playerId}-${targetCharacterId}`
-      : `view-${playerId}`;
+      ? `locate-${playerId}-${targetCharacterId}`
+      : `locate-${playerId}`;
     await this.#runAction(action, async () => {
       this.#setFocusStatus(
         await focusViewportOnPlayerCharacters(
@@ -718,7 +832,7 @@ class PopoverController {
     });
   }
 
-  async #viewWholeParty(): Promise<void> {
+  async #locateWholeParty(): Promise<void> {
     await this.#runAction("whole-party", async () => {
       const currentPlayers = groupPlayerConnections(
         await OBR.party.getPlayers(),
@@ -731,6 +845,40 @@ class PopoverController {
           this.#targetIndicatorEnabled,
         ),
       );
+    });
+  }
+
+  async #locateToken(characterId: string): Promise<void> {
+    await this.#runAction(`locate-token-${characterId}`, async () => {
+      const character = await getGmCharacterToken(characterId);
+      this.#setFocusStatus(
+        await focusViewportOnCharacterItems(
+          [character],
+          this.#singleTokenZoom,
+          this.#targetIndicatorEnabled,
+          true,
+        ),
+      );
+    });
+  }
+
+  async #toggleTokenVisibility(characterId: string): Promise<void> {
+    await this.#runAction(`visibility-token-${characterId}`, async () => {
+      const visible = await toggleCharacterTokenVisibility(characterId);
+      this.#status = {
+        message: `Character token ${visible ? "shown" : "hidden"}.`,
+        tone: "success",
+      };
+    });
+  }
+
+  async #moveTokenToViewportCenter(characterId: string): Promise<void> {
+    await this.#runAction(`move-token-${characterId}`, async () => {
+      await moveCharacterTokenToViewportCenter(characterId);
+      this.#status = {
+        message: "Character token moved to the viewport center.",
+        tone: "success",
+      };
     });
   }
 

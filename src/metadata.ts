@@ -5,6 +5,8 @@ import {
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_TARGET_INDICATOR_ENABLED,
+  LEGACY_PLAYER_SETTINGS_METADATA_KEY,
+  LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
   ROOM_SETTINGS_METADATA_KEY,
 } from "./constants";
@@ -18,6 +20,25 @@ export interface PlayerSettings {
 
 export interface RoomSettings {
   globalEnabled: boolean;
+}
+
+function isSettingsObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isValidLegacyPlayerSettings(value: unknown): boolean {
+  if (!isSettingsObject(value)) {
+    return false;
+  }
+  return (
+    typeof value.autoFocusEnabled === "boolean" ||
+    typeof value.targetIndicatorEnabled === "boolean" ||
+    typeof value.singleTokenZoom === "number"
+  );
+}
+
+function isValidLegacyRoomSettings(value: unknown): boolean {
+  return isSettingsObject(value) && typeof value.globalEnabled === "boolean";
 }
 
 function readBooleanSetting(
@@ -36,15 +57,16 @@ function readBooleanSetting(
 }
 
 export function readPlayerSettings(metadata: Metadata): PlayerSettings {
-  const value = metadata[PLAYER_SETTINGS_METADATA_KEY];
-  const settings =
-    typeof value === "object" && value !== null && !Array.isArray(value)
-      ? (value as Record<string, unknown>)
-      : {};
+  const value =
+    metadata[PLAYER_SETTINGS_METADATA_KEY] ??
+    metadata[LEGACY_PLAYER_SETTINGS_METADATA_KEY];
+  const settings = isSettingsObject(value) ? value : {};
   return {
     autoFocusEnabled: readBooleanSetting(
       metadata,
-      PLAYER_SETTINGS_METADATA_KEY,
+      metadata[PLAYER_SETTINGS_METADATA_KEY] == null
+        ? LEGACY_PLAYER_SETTINGS_METADATA_KEY
+        : PLAYER_SETTINGS_METADATA_KEY,
       "autoFocusEnabled",
       DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
     ),
@@ -54,7 +76,9 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
         : DEFAULT_SINGLE_TOKEN_ZOOM,
     targetIndicatorEnabled: readBooleanSetting(
       metadata,
-      PLAYER_SETTINGS_METADATA_KEY,
+      metadata[PLAYER_SETTINGS_METADATA_KEY] == null
+        ? LEGACY_PLAYER_SETTINGS_METADATA_KEY
+        : PLAYER_SETTINGS_METADATA_KEY,
       "targetIndicatorEnabled",
       DEFAULT_TARGET_INDICATOR_ENABLED,
     ),
@@ -62,10 +86,14 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
 }
 
 export function readRoomSettings(metadata: Metadata): RoomSettings {
+  const key =
+    metadata[ROOM_SETTINGS_METADATA_KEY] == null
+      ? LEGACY_ROOM_SETTINGS_METADATA_KEY
+      : ROOM_SETTINGS_METADATA_KEY;
   return {
     globalEnabled: readBooleanSetting(
       metadata,
-      ROOM_SETTINGS_METADATA_KEY,
+      key,
       "globalEnabled",
       DEFAULT_GLOBAL_ENABLED,
     ),
@@ -73,7 +101,18 @@ export function readRoomSettings(metadata: Metadata): RoomSettings {
 }
 
 export async function getPlayerSettings(): Promise<PlayerSettings> {
-  return readPlayerSettings(await OBR.player.getMetadata());
+  const metadata = await OBR.player.getMetadata();
+  const settings = readPlayerSettings(metadata);
+  if (
+    metadata[PLAYER_SETTINGS_METADATA_KEY] == null &&
+    isValidLegacyPlayerSettings(metadata[LEGACY_PLAYER_SETTINGS_METADATA_KEY])
+  ) {
+    await OBR.player.setMetadata({
+      [PLAYER_SETTINGS_METADATA_KEY]: settings,
+      [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
+    });
+  }
+  return settings;
 }
 
 export async function updatePlayerSettings(
@@ -110,7 +149,19 @@ export async function setPlayerTargetIndicatorEnabled(
 }
 
 export async function getRoomSettings(): Promise<RoomSettings> {
-  return readRoomSettings(await OBR.room.getMetadata());
+  const metadata = await OBR.room.getMetadata();
+  const settings = readRoomSettings(metadata);
+  if (
+    metadata[ROOM_SETTINGS_METADATA_KEY] == null &&
+    isValidLegacyRoomSettings(metadata[LEGACY_ROOM_SETTINGS_METADATA_KEY]) &&
+    (await OBR.player.getRole()) === "GM"
+  ) {
+    await OBR.room.setMetadata({
+      [ROOM_SETTINGS_METADATA_KEY]: settings,
+      [LEGACY_ROOM_SETTINGS_METADATA_KEY]: null,
+    });
+  }
+  return settings;
 }
 
 export async function setGlobalEnabled(globalEnabled: boolean): Promise<void> {
