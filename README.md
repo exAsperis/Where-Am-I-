@@ -48,7 +48,7 @@ Owlbear Rodeo player metadata.
 - The **Party** tile provides Focus and Highlight actions for **Me** and
   **Party**.
 - **All character tokens** provides the same Me/Party actions while retaining
-  each token's Show/Hide and Move controls.
+  each token's icon-based Show/Hide control and **Move here** action.
 - The GM item context menu can Focus or Highlight any selected items for the
   Party, regardless of item layer.
 - **Highlight color** sets the shared room default for players. Its Default
@@ -179,6 +179,9 @@ connection:
     neither zooms closer than the recipient's single-character zoom setting.
 29. Send Player and Party actions and confirm each affected player sees one
     concise toast naming the GM, action, and target.
+30. Confirm player character lists remain inside their player card border, the
+    Party card uses its four-color icon, and each all-token row aligns **Move
+    here**, **Focus**, and **Highlight** beneath its top-right visibility icon.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

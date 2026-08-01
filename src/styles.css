@@ -336,8 +336,12 @@ h2 {
 
 .player-group {
   display: grid;
-  gap: 5px;
+  gap: 8px;
   min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: transparent;
 }
 
 .character-list {
@@ -414,7 +418,7 @@ h2 {
 }
 
 .character-row--all {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .character-actions {
@@ -425,15 +429,44 @@ h2 {
 }
 
 .character-actions--all {
-  grid-template-columns: 1fr 1fr;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr 1fr;
   width: 100%;
 }
 
-.token-management-actions {
+.visibility-button {
   display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  place-items: center;
+  align-self: start;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.visibility-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.visibility-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+
+.visibility-button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.visibility-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .character-disclosure {
@@ -466,9 +499,7 @@ h2 {
   gap: 8px;
   align-items: center;
   min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 9px;
+  padding: 0;
 }
 
 .player-identity {
@@ -509,7 +540,21 @@ h2 {
   padding: 10px;
   border: 1px solid var(--color-border);
   border-radius: 9px;
-  background: var(--color-surface);
+  background: transparent;
+}
+
+.party-icon {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(2, 7px);
+  gap: 2px;
+}
+
+.party-icon span {
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
 }
 
 .action-menu-row {
