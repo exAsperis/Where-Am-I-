@@ -414,7 +414,7 @@ h2 {
 }
 
 .character-row--gm {
-  background: var(--color-surface);
+  background: transparent;
 }
 
 .character-row--all {
@@ -430,7 +430,7 @@ h2 {
 
 .character-actions--all {
   grid-column: 1 / -1;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) 87.5px 87.5px;
   width: 100%;
 }
 
