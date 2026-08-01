@@ -20,7 +20,9 @@ import {
 } from "./metadata";
 import { SceneReadinessTrigger } from "./readiness";
 import {
+  createLegacyFocusCommand,
   createTargetActionCommand,
+  isTargetActionCommand,
   RecentRequestIds,
   routeTargetAction,
   type TargetAction,
@@ -39,6 +41,11 @@ export class BackgroundController {
   async start(): Promise<void> {
     const role = await OBR.player.getRole();
     if (role === "GM") {
+      this.#disposeCallbacks.push(
+        OBR.broadcast.onMessage(TARGET_ACTION_BROADCAST_CHANNEL, ({ data }) => {
+          void this.#relayGmPanelAction(data);
+        }),
+      );
       await this.#startGmContextMenus();
       return;
     }
@@ -86,6 +93,26 @@ export class BackgroundController {
       console.error(
         "Where am I? could not read initial scene readiness.",
         error,
+      );
+    }
+  }
+
+  async #relayGmPanelAction(data: unknown): Promise<void> {
+    if (!isTargetActionCommand(data)) return;
+    await OBR.broadcast.sendMessage(TARGET_ACTION_BROADCAST_CHANNEL, data, {
+      destination: "REMOTE",
+    });
+    if (data.action === "FOCUS" && data.recipient.scope === "PLAYER") {
+      await OBR.broadcast.sendMessage(
+        LEGACY_FOCUS_BROADCAST_CHANNEL,
+        createLegacyFocusCommand(
+          data.recipient.playerId,
+          data.requestId,
+          data.targetCharacterIds.length === 1
+            ? data.targetCharacterIds[0]
+            : undefined,
+        ),
+        { destination: "REMOTE" },
       );
     }
   }

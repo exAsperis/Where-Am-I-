@@ -1,7 +1,6 @@
 import OBR, { type Item, type Player, type Theme } from "@owlbear-rodeo/sdk";
 
 import {
-  LEGACY_FOCUS_BROADCAST_CHANNEL,
   TARGET_ACTION_BROADCAST_CHANNEL,
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
@@ -36,7 +35,6 @@ import {
   setPlayerSettingsExpanded,
 } from "./metadata";
 import {
-  createLegacyFocusCommand,
   createTargetActionCommand,
   type TargetAction,
   type TargetRecipient,
@@ -985,23 +983,13 @@ class PopoverController {
           recipient,
           targets.map((target) => target.id),
           includeHidden,
+          "ALL_ITEMS",
         );
         await OBR.broadcast.sendMessage(
           TARGET_ACTION_BROADCAST_CHANNEL,
           command,
-          { destination: "REMOTE" },
+          { destination: "LOCAL" },
         );
-        if (action === "FOCUS" && recipient.scope === "PLAYER") {
-          await OBR.broadcast.sendMessage(
-            LEGACY_FOCUS_BROADCAST_CHANNEL,
-            createLegacyFocusCommand(
-              recipient.playerId,
-              command.requestId,
-              targets.length === 1 ? targets[0]?.id : undefined,
-            ),
-            { destination: "REMOTE" },
-          );
-        }
         this.#status = {
           message: `${action === "FOCUS" ? "Focus" : "Highlight"} sent to ${recipient.scope === "PARTY" ? "the party" : "the player"}.`,
           tone: "success",

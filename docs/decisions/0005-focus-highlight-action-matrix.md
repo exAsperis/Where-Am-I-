@@ -22,6 +22,12 @@ selectable without crowding each player and character tile.
 - Register GM-only background context-menu actions for Focus → Party and
   Highlight → Party. Context targets preserve exact selected item IDs and may
   include any item layer.
+- Treat explicit GM panel targets as the exact GM-resolved item set on receiving
+  clients. Do not reapply client-local Character visibility classification;
+  sender-side player and party selection already enforces those policies.
+- Relay panel actions locally through the persistent GM background before the
+  remote broadcast so receivers authenticate the same GM connection used by
+  background context-menu actions.
 - Use a dedicated target-action channel while continuing to receive the legacy
   focus channel. Send a same-request-ID legacy fallback for single-player Focus
   so mixed-version clients execute it exactly once. Dual-write the legacy
