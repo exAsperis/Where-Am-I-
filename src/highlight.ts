@@ -6,30 +6,30 @@ import OBR, {
 } from "@owlbear-rodeo/sdk";
 
 import {
-  TARGET_INDICATOR_COLOR,
-  TARGET_INDICATOR_FADE_MS,
-  TARGET_INDICATOR_FRAME_MS,
-  TARGET_INDICATOR_INITIAL_SCALE,
-  TARGET_INDICATOR_METADATA_KEY,
-  TARGET_INDICATOR_SHRINK_MS,
-  TARGET_INDICATOR_STROKE_WIDTH,
+  HIGHLIGHT_COLOR,
+  HIGHLIGHT_FADE_MS,
+  HIGHLIGHT_FRAME_MS,
+  HIGHLIGHT_INITIAL_SCALE,
+  HIGHLIGHT_METADATA_KEY,
+  HIGHLIGHT_SHRINK_MS,
+  HIGHLIGHT_STROKE_WIDTH,
 } from "./constants";
 
-export interface IndicatorGeometry {
+export interface HighlightGeometry {
   center: { x: number; y: number };
   finalDiameter: number;
   initialDiameter: number;
 }
 
-export interface IndicatorFrame {
+export interface HighlightFrame {
   diameter: number;
   opacity: number;
   complete: boolean;
 }
 
-export function createIndicatorGeometry(
+export function createHighlightGeometry(
   bounds: BoundingBox,
-): IndicatorGeometry | undefined {
+): HighlightGeometry | undefined {
   const finalDiameter = Math.max(bounds.width, bounds.height);
   if (!Number.isFinite(finalDiameter) || finalDiameter <= 0) {
     return undefined;
@@ -37,29 +37,27 @@ export function createIndicatorGeometry(
   return {
     center: { ...bounds.center },
     finalDiameter,
-    initialDiameter: finalDiameter * TARGET_INDICATOR_INITIAL_SCALE,
+    initialDiameter: finalDiameter * HIGHLIGHT_INITIAL_SCALE,
   };
 }
 
-export function calculateIndicatorFrame(
-  geometry: IndicatorGeometry,
+export function calculateHighlightFrame(
+  geometry: HighlightGeometry,
   elapsedMs: number,
-): IndicatorFrame {
+): HighlightFrame {
   const safeElapsed = Math.max(0, elapsedMs);
-  const shrinkProgress = Math.min(1, safeElapsed / TARGET_INDICATOR_SHRINK_MS);
+  const shrinkProgress = Math.min(1, safeElapsed / HIGHLIGHT_SHRINK_MS);
   const diameter =
     geometry.initialDiameter +
     (geometry.finalDiameter - geometry.initialDiameter) * shrinkProgress;
   const fadeProgress = Math.min(
     1,
-    Math.max(0, safeElapsed - TARGET_INDICATOR_SHRINK_MS) /
-      TARGET_INDICATOR_FADE_MS,
+    Math.max(0, safeElapsed - HIGHLIGHT_SHRINK_MS) / HIGHLIGHT_FADE_MS,
   );
   return {
     diameter,
     opacity: 1 - fadeProgress,
-    complete:
-      safeElapsed >= TARGET_INDICATOR_SHRINK_MS + TARGET_INDICATOR_FADE_MS,
+    complete: safeElapsed >= HIGHLIGHT_SHRINK_MS + HIGHLIGHT_FADE_MS,
   };
 }
 
@@ -71,54 +69,54 @@ type ActiveAnimation = {
 let animationGeneration = 0;
 let activeAnimation: ActiveAnimation | undefined;
 
-function isTargetIndicator(item: Item): boolean {
-  return item.metadata[TARGET_INDICATOR_METADATA_KEY] === true;
+function isHighlight(item: Item): boolean {
+  return item.metadata[HIGHLIGHT_METADATA_KEY] === true;
 }
 
-async function deleteIndicators(ids: readonly string[]): Promise<void> {
+async function deleteHighlights(ids: readonly string[]): Promise<void> {
   if (ids.length === 0) {
     return;
   }
   await OBR.scene.local.deleteItems([...ids]);
 }
 
-export async function clearTargetIndicators(): Promise<void> {
+export async function clearHighlights(): Promise<void> {
   animationGeneration += 1;
   const activeIds = activeAnimation?.ids ?? [];
   activeAnimation = undefined;
   try {
-    const existing = await OBR.scene.local.getItems(isTargetIndicator);
-    await deleteIndicators([
+    const existing = await OBR.scene.local.getItems(isHighlight);
+    await deleteHighlights([
       ...new Set([...activeIds, ...existing.map((item) => item.id)]),
     ]);
   } catch (error) {
-    console.error("Where am I? could not clear target indicators.", error);
+    console.error("Where am I? could not clear highlights.", error);
   }
 }
 
 function waitForNextFrame(): Promise<void> {
   return new Promise((resolve) => {
-    globalThis.setTimeout(resolve, TARGET_INDICATOR_FRAME_MS);
+    globalThis.setTimeout(resolve, HIGHLIGHT_FRAME_MS);
   });
 }
 
-async function animateIndicators(
+async function animateHighlights(
   generation: number,
   ids: string[],
-  geometries: IndicatorGeometry[],
+  geometries: HighlightGeometry[],
 ): Promise<void> {
   const startedAt = Date.now();
   try {
     while (generation === animationGeneration) {
       const elapsed = Date.now() - startedAt;
       const frames = geometries.map((geometry) =>
-        calculateIndicatorFrame(geometry, elapsed),
+        calculateHighlightFrame(geometry, elapsed),
       );
       const complete = frames.every((frame) => frame.complete);
       if (complete) {
         break;
       }
-      const fading = elapsed >= TARGET_INDICATOR_SHRINK_MS;
+      const fading = elapsed >= HIGHLIGHT_SHRINK_MS;
       await OBR.scene.local.updateItems(
         ids,
         (items) => {
@@ -142,12 +140,12 @@ async function animateIndicators(
       await waitForNextFrame();
     }
   } catch (error) {
-    console.error("Where am I? target indicator animation failed.", error);
+    console.error("Where am I? highlight animation failed.", error);
   } finally {
     try {
-      await deleteIndicators(ids);
+      await deleteHighlights(ids);
     } catch (error) {
-      console.error("Where am I? could not remove target indicators.", error);
+      console.error("Where am I? could not remove highlights.", error);
     }
     if (activeAnimation?.generation === generation) {
       activeAnimation = undefined;
@@ -155,11 +153,11 @@ async function animateIndicators(
   }
 }
 
-export async function showTargetIndicators(
+export async function showHighlights(
   items: readonly Item[],
   enabled: boolean,
 ): Promise<void> {
-  await clearTargetIndicators();
+  await clearHighlights();
   if (!enabled || items.length === 0) {
     return;
   }
@@ -170,11 +168,11 @@ export async function showTargetIndicators(
     );
     const targets = bounds
       .map((itemBounds, index) => ({
-        geometry: createIndicatorGeometry(itemBounds),
+        geometry: createHighlightGeometry(itemBounds),
         item: items[index],
       }))
       .filter(
-        (target): target is { geometry: IndicatorGeometry; item: Item } =>
+        (target): target is { geometry: HighlightGeometry; item: Item } =>
           target.geometry !== undefined && target.item !== undefined,
       );
     if (targets.length === 0) {
@@ -183,22 +181,22 @@ export async function showTargetIndicators(
 
     const shapes = targets.map(({ geometry, item }) =>
       buildShape()
-        .name(`Where am I? target: ${item.name}`)
+        .name(`Where am I? highlight: ${item.name}`)
         .position({ ...geometry.center })
         .width(geometry.initialDiameter)
         .height(geometry.initialDiameter)
         .shapeType("CIRCLE")
-        .fillColor(TARGET_INDICATOR_COLOR)
+        .fillColor(HIGHLIGHT_COLOR)
         .fillOpacity(0)
-        .strokeColor(TARGET_INDICATOR_COLOR)
+        .strokeColor(HIGHLIGHT_COLOR)
         .strokeOpacity(1)
-        .strokeWidth(TARGET_INDICATOR_STROKE_WIDTH)
+        .strokeWidth(HIGHLIGHT_STROKE_WIDTH)
         .locked(true)
         .disableHit(true)
         .disableAutoZIndex(true)
         .zIndex(1_000_000)
         .layer("CONTROL")
-        .metadata({ [TARGET_INDICATOR_METADATA_KEY]: true })
+        .metadata({ [HIGHLIGHT_METADATA_KEY]: true })
         .build(),
     );
     await OBR.scene.local.addItems(shapes);
@@ -206,12 +204,12 @@ export async function showTargetIndicators(
     const generation = animationGeneration;
     const ids = shapes.map((shape) => shape.id);
     activeAnimation = { generation, ids };
-    void animateIndicators(
+    void animateHighlights(
       generation,
       ids,
       targets.map(({ geometry }) => geometry),
     );
   } catch (error) {
-    console.error("Where am I? could not show target indicators.", error);
+    console.error("Where am I? could not show highlights.", error);
   }
 }

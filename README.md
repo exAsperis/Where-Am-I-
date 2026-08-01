@@ -1,7 +1,7 @@
 # Where am I?
 
 Where am I? is an [Owlbear Rodeo](https://www.owlbear.rodeo/) extension that
-helps players and GMs locate player-owned characters on the current scene.
+helps players and GMs focus and highlight characters on the current scene.
 
 ## For players and GMs
 
@@ -19,33 +19,33 @@ Owlbear Rodeo extension bar.
 
 ### Player controls
 
-- **Automatically locate my character** focuses your character when the
+- **Automatically focus my character** focuses your character when the
   extension starts and when a new scene becomes ready. It defaults to enabled.
-- **Locate me now** frames all your visible characters together.
+- **Focus me now** frames all your visible characters together.
 - **Single-character zoom** controls how closely one selected character is
   framed. It defaults to 50% and accepts 10–200%.
-- **Show target indicators** displays a private orange circle around each
+- **Show highlights** displays a private orange circle around each
   character being found. It defaults to enabled.
 - If you own several visible characters, **My characters** lets you focus one
   named token at a time.
 
-Your automatic-focus, zoom, and target-indicator settings are saved to your
+Your automatic-focus, zoom, and highlight settings are saved to your
 Owlbear Rodeo player metadata.
 
 ### GM controls
 
 - **Enable Where am I? for players** enables or disables player-facing
   behavior for the room.
-- **Send to character** asks the selected player's clients to focus their
-  character.
-- **Locate character** frames one player's visible characters in your viewport.
-- For players with multiple characters, expand **Characters (N)** to send or
-  locate one named token.
-- **Locate whole party** frames the visible characters owned by connected
-  players in your viewport.
+- Each player and character has **Focus** and **Highlight** menus. **Me** acts
+  locally, **Player** acts on the controlling player, and **Party** acts on all
+  connected non-GM clients.
+- The **Party** tile provides Focus and Highlight actions for **Me** and
+  **Party**.
+- **All character tokens** provides the same Me/Party actions while retaining
+  each token's Show/Hide and Move controls.
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
-saved zoom and target-indicator settings, while remotely focused players use
+saved zoom and highlight settings, while remotely focused players use
 their own settings. The panel grows to fit additional rows up to its maximum
 height, then scrolls for larger parties.
 
@@ -60,8 +60,8 @@ Each client's viewport acts independently. A player's local action never moves
 another client's viewport, and a GM moves a player's viewport only by
 explicitly sending that player a focus command.
 
-Target animations use temporary client-local scene items. Only the person whose
-viewport is moving sees them; they never become shared scene content.
+Highlights use temporary client-local scene items. They never become shared
+scene content, and an explicit GM Highlight does not move any viewport.
 
 The extension has no backend, accounts, analytics, or external data storage.
 Preferences use namespaced Owlbear Rodeo player metadata, global enablement
@@ -130,7 +130,7 @@ connection:
 3. Player with automatic behavior disabled joins.
 4. Enabled player changes scenes.
 5. Disabled player changes scenes.
-6. Player presses **Locate me now**.
+6. Player presses **Focus me now**.
 7. One player's local action does not affect another player.
 8. GM disables and re-enables the feature without changing player preferences.
 9. GM remotely focuses one player without moving other players.
@@ -144,14 +144,14 @@ connection:
 17. A multi-token player focuses each named token individually.
 18. GM player rows use Owlbear player names rather than token names.
 19. The extension bar and manifest use the orange/blue logo artwork.
-20. Expand and collapse GM character lists, then use each token's **Send** and
-    **Locate** actions.
-21. Confirm one private target circle per focused token for automatic, manual,
+20. Expand and collapse GM character lists, then exercise every valid Focus and
+    Highlight recipient option plus each token's Show/Hide and Move actions.
+21. Confirm one private highlight circle per focused token for automatic, manual,
     remote, player, GM, multi-token, and whole-party focus.
-22. Disable indicators independently on GM and player clients, reload, and
+22. Disable highlights independently on GM and player clients, reload, and
     confirm each preference persists.
 23. Trigger another focus during an animation and confirm the previous
-    indicators are removed.
+    highlights are removed.
 24. Confirm the translucent blurred panel grows for four players (including
     two expanded two-character players) and scrolls for larger parties.
 

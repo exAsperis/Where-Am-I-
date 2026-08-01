@@ -1,14 +1,18 @@
 import OBR from "@owlbear-rodeo/sdk";
 
-import { FOCUS_BROADCAST_CHANNEL } from "./constants";
-import { focusViewportOnPlayerCharacters } from "./focus";
+import { TARGET_ACTION_BROADCAST_CHANNEL } from "./constants";
+import {
+  focusViewportOnCharacterItems,
+  focusViewportOnPlayerCharacters,
+  highlightCharacterItems,
+} from "./target-actions";
 import {
   getPlayerSettings,
   getRoomSettings,
   readRoomSettings,
 } from "./metadata";
 import { SceneReadinessTrigger } from "./readiness";
-import { RecentRequestIds, routeFocusCommand } from "./remote-focus";
+import { RecentRequestIds, routeTargetAction } from "./remote-actions";
 
 export class BackgroundController {
   readonly #disposeCallbacks: Array<() => void> = [];
@@ -47,7 +51,7 @@ export class BackgroundController {
         }
       }),
       OBR.broadcast.onMessage(
-        FOCUS_BROADCAST_CHANNEL,
+        TARGET_ACTION_BROADCAST_CHANNEL,
         ({ data, connectionId }) => {
           void this.#handleRemoteCommand(data, connectionId);
         },
@@ -93,7 +97,7 @@ export class BackgroundController {
       const result = await focusViewportOnPlayerCharacters(
         this.#playerId,
         settings.singleTokenZoom,
-        settings.targetIndicatorEnabled,
+        settings.highlightEnabled,
       );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
@@ -123,7 +127,7 @@ export class BackgroundController {
       ]);
       this.#globalEnabled = roomSettings.globalEnabled;
 
-      const decision = routeFocusCommand({
+      const decision = routeTargetAction({
         data,
         currentPlayerId: this.#playerId,
         senderConnectionId,
@@ -134,12 +138,29 @@ export class BackgroundController {
 
       if (decision.execute) {
         const settings = await getPlayerSettings();
-        await focusViewportOnPlayerCharacters(
-          this.#playerId,
-          settings.singleTokenZoom,
-          settings.targetIndicatorEnabled,
-          decision.command.targetCharacterId,
-        );
+        if (decision.routed.kind === "LEGACY_FOCUS") {
+          await focusViewportOnPlayerCharacters(
+            this.#playerId,
+            settings.singleTokenZoom,
+            settings.highlightEnabled,
+            decision.routed.command.targetCharacterId,
+          );
+        } else {
+          const command = decision.routed.command;
+          if (command.action === "HIGHLIGHT") {
+            await highlightCharacterItems(
+              command.targetCharacterIds,
+              command.includeHidden,
+            );
+          } else {
+            await focusViewportOnCharacterItems(
+              command.targetCharacterIds,
+              settings.singleTokenZoom,
+              settings.highlightEnabled,
+              command.includeHidden,
+            );
+          }
+        }
       }
     } catch (error) {
       console.error(

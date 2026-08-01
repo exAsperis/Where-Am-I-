@@ -19,7 +19,7 @@ vi.mock("@owlbear-rodeo/sdk", () => {
   let nextId = 0;
   const buildShape = () => {
     const shape: Record<string, unknown> = {
-      id: `indicator-${++nextId}`,
+      id: `highlight-${++nextId}`,
       type: "SHAPE",
       metadata: {},
       style: {},
@@ -60,10 +60,10 @@ vi.mock("@owlbear-rodeo/sdk", () => {
 });
 
 import {
-  calculateIndicatorFrame,
-  createIndicatorGeometry,
-  showTargetIndicators,
-} from "./target-indicator";
+  calculateHighlightFrame,
+  createHighlightGeometry,
+  showHighlights,
+} from "./highlight";
 
 const bounds = {
   min: { x: 10, y: 20 },
@@ -90,7 +90,7 @@ const character = {
   layer: "CHARACTER" as const,
 };
 
-describe("target indicator geometry", () => {
+describe("highlight geometry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sdk.localItems.length = 0;
@@ -124,7 +124,7 @@ describe("target indicator geometry", () => {
   });
 
   it("uses the larger token dimension and starts at twenty times its size", () => {
-    expect(createIndicatorGeometry(bounds)).toEqual({
+    expect(createHighlightGeometry(bounds)).toEqual({
       center: { x: 60, y: 120 },
       finalDiameter: 200,
       initialDiameter: 4_000,
@@ -133,10 +133,10 @@ describe("target indicator geometry", () => {
 
   it("skips malformed or empty bounds", () => {
     expect(
-      createIndicatorGeometry({ ...bounds, width: 0, height: 0 }),
+      createHighlightGeometry({ ...bounds, width: 0, height: 0 }),
     ).toBeUndefined();
     expect(
-      createIndicatorGeometry({
+      createHighlightGeometry({
         ...bounds,
         width: Number.NaN,
         height: Number.NaN,
@@ -145,41 +145,41 @@ describe("target indicator geometry", () => {
   });
 
   it("shrinks for three seconds and fades for the next two", () => {
-    const geometry = createIndicatorGeometry(bounds);
+    const geometry = createHighlightGeometry(bounds);
     expect(geometry).toBeDefined();
     if (!geometry) {
       return;
     }
 
-    expect(calculateIndicatorFrame(geometry, 0)).toEqual({
+    expect(calculateHighlightFrame(geometry, 0)).toEqual({
       diameter: 4_000,
       opacity: 1,
       complete: false,
     });
-    expect(calculateIndicatorFrame(geometry, 1_500)).toEqual({
+    expect(calculateHighlightFrame(geometry, 1_500)).toEqual({
       diameter: 2_100,
       opacity: 1,
       complete: false,
     });
-    expect(calculateIndicatorFrame(geometry, 3_000)).toEqual({
+    expect(calculateHighlightFrame(geometry, 3_000)).toEqual({
       diameter: 200,
       opacity: 1,
       complete: false,
     });
-    expect(calculateIndicatorFrame(geometry, 4_000)).toEqual({
+    expect(calculateHighlightFrame(geometry, 4_000)).toEqual({
       diameter: 200,
       opacity: 0.5,
       complete: false,
     });
-    expect(calculateIndicatorFrame(geometry, 5_000)).toEqual({
+    expect(calculateHighlightFrame(geometry, 5_000)).toEqual({
       diameter: 200,
       opacity: 0,
       complete: true,
     });
   });
 
-  it("adds only local items and replaces a previous indicator run", async () => {
-    await showTargetIndicators([character], true);
+  it("adds only local items and replaces a previous highlight run", async () => {
+    await showHighlights([character], true);
     expect(sdk.scene.local.addItems).toHaveBeenCalledTimes(1);
     expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
       expect.objectContaining({
@@ -195,21 +195,21 @@ describe("target indicator geometry", () => {
     expect(sdk.scene.local.updateItems).toHaveBeenCalled();
     expect(sdk.localItems[0]?.position).toEqual({ x: 60, y: 120 });
 
-    await showTargetIndicators([character], true);
+    await showHighlights([character], true);
     expect(sdk.scene.local.deleteItems).toHaveBeenCalledWith([
-      expect.stringMatching(/^indicator-/),
+      expect.stringMatching(/^highlight-/),
     ]);
     expect(sdk.scene.local.addItems).toHaveBeenCalledTimes(2);
   });
 
-  it("cleans existing indicators without adding new ones when disabled", async () => {
-    await showTargetIndicators([character], true);
-    await showTargetIndicators([character], false);
+  it("cleans existing highlights without adding new ones when disabled", async () => {
+    await showHighlights([character], true);
+    await showHighlights([character], false);
     expect(sdk.scene.local.deleteItems).toHaveBeenCalled();
     expect(sdk.scene.local.addItems).toHaveBeenCalledTimes(1);
   });
 
-  it("creates and animates one local indicator for every target", async () => {
+  it("creates and animates one local highlight for every target", async () => {
     const secondCharacter = {
       ...character,
       id: "character-2",
@@ -224,7 +224,7 @@ describe("target indicator geometry", () => {
         center: { x: 400, y: 500 },
       });
 
-    await showTargetIndicators([character, secondCharacter], true);
+    await showHighlights([character, secondCharacter], true);
 
     expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
       expect.objectContaining({ width: 4_000, height: 4_000 }),
@@ -236,8 +236,8 @@ describe("target indicator geometry", () => {
     ]);
     expect(sdk.scene.local.updateItems).toHaveBeenCalledWith(
       [
-        expect.stringMatching(/^indicator-/),
-        expect.stringMatching(/^indicator-/),
+        expect.stringMatching(/^highlight-/),
+        expect.stringMatching(/^highlight-/),
       ],
       expect.any(Function),
       true,

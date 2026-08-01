@@ -18,17 +18,18 @@ const sdk = vi.hoisted(() => ({
     getHeight: vi.fn(),
   },
 }));
-const indicator = vi.hoisted(() => ({
-  showTargetIndicators: vi.fn(),
+const highlight = vi.hoisted(() => ({
+  showHighlights: vi.fn(),
 }));
 
 vi.mock("@owlbear-rodeo/sdk", () => ({ default: sdk }));
-vi.mock("./target-indicator", () => indicator);
+vi.mock("./highlight", () => highlight);
 
 import {
   focusViewportOnCharacterItems,
   focusViewportOnPlayerCharacters,
-} from "./focus";
+  highlightCharacterItems,
+} from "./target-actions";
 
 function item(id: string, overrides: Partial<Item> = {}): Item {
   return {
@@ -65,7 +66,7 @@ describe("viewport focus service", () => {
     sdk.viewport.animateToBounds.mockResolvedValue(undefined);
     sdk.viewport.getWidth.mockResolvedValue(800);
     sdk.viewport.getHeight.mockResolvedValue(600);
-    indicator.showTargetIndicators.mockResolvedValue(undefined);
+    highlight.showHighlights.mockResolvedValue(undefined);
   });
 
   it("defaults to 50% zoom for a single character", async () => {
@@ -80,7 +81,7 @@ describe("viewport focus service", () => {
       center: { x: 50, y: 50 },
     });
     expect(sdk.scene.grid.getDpi).not.toHaveBeenCalled();
-    expect(indicator.showTargetIndicators).toHaveBeenCalledWith(
+    expect(highlight.showHighlights).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "one" })],
       true,
     );
@@ -104,7 +105,7 @@ describe("viewport focus service", () => {
     ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
   });
 
-  it("can explicitly locate a hidden Character-layer token for the GM", async () => {
+  it("can explicitly focus a hidden Character-layer token for the GM", async () => {
     await expect(
       focusViewportOnCharacterItems(
         [item("hidden", { visible: false })],
@@ -116,9 +117,9 @@ describe("viewport focus service", () => {
     expect(sdk.scene.items.getItemBounds).toHaveBeenCalledWith(["hidden"]);
   });
 
-  it("still focuses when target indicator setup fails", async () => {
+  it("still focuses when highlight setup fails", async () => {
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
-    indicator.showTargetIndicators.mockRejectedValueOnce(
+    highlight.showHighlights.mockRejectedValueOnce(
       new Error("local scene unavailable"),
     );
 
@@ -128,6 +129,20 @@ describe("viewport focus service", () => {
     expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
     expect(errorLog).toHaveBeenCalled();
     errorLog.mockRestore();
+  });
+
+  it("highlights explicitly without reading or moving the viewport", async () => {
+    await expect(highlightCharacterItems([item("one")])).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+    expect(highlight.showHighlights).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: "one" })],
+      true,
+    );
+    expect(sdk.scene.items.getItemBounds).not.toHaveBeenCalled();
+    expect(sdk.viewport.getWidth).not.toHaveBeenCalled();
+    expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
   });
 
   it("frames all visible characters owned by the target player", async () => {

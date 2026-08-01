@@ -371,8 +371,15 @@ h2 {
 }
 
 .character-actions--all {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1fr 1fr;
   width: 100%;
+}
+
+.token-management-actions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
 }
 
 .character-disclosure {
@@ -438,6 +445,57 @@ h2 {
   grid-template-columns: 1fr 1fr;
   gap: 5px;
   width: 196px;
+}
+
+.action-tile {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+}
+
+.action-menu-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  width: 150px;
+}
+
+.action-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.action-menu > .button {
+  width: 100%;
+}
+
+.action-menu__items {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  right: 0;
+  display: none;
+  min-width: 96px;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+}
+
+.action-menu--open .action-menu__items {
+  display: grid;
+}
+
+.action-menu__items .button {
+  width: 100%;
+  text-align: left;
 }
 
 .status {

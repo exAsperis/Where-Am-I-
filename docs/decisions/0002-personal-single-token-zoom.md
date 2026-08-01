@@ -24,7 +24,7 @@ existing all-owned-characters action.
 - Apply the receiving player's preference to automatic and remote player
   focus. Apply the GM's preference to GM-local focus.
 - Show visible owned tokens by token name in a player's **My characters** list
-  only when the player owns more than one. Keep **Locate me now** as the
+  only when the player owns more than one. Keep **Focus me now** as the
   all-owned-characters action.
 - Label GM party rows with Owlbear player names rather than character names.
 

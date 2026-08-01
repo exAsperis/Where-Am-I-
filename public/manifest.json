@@ -1,17 +1,17 @@
 {
   "name": "Where am I?",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "manifest_version": 1,
   "author": "ex Asperis",
-  "description": "Locate and frame Character-layer tokens in Owlbear Rodeo.",
+  "description": "Focus and highlight Character-layer tokens in Owlbear Rodeo.",
   "homepage_url": "https://github.com/exAsperis/Where-Am-I-",
-  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.5.0",
+  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.6.0",
   "action": {
     "title": "Where am I?",
-    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.5.0",
-    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.5.0",
+    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.6.0",
+    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.6.0",
     "height": 860,
     "width": 360
   },
-  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.5.0"
+  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.6.0"
 }

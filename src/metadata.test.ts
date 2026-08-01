@@ -27,7 +27,7 @@ import {
   getRoomSettings,
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
-  setPlayerTargetIndicatorEnabled,
+  setPlayerHighlightEnabled,
 } from "./metadata";
 
 describe("metadata settings", () => {
@@ -49,12 +49,13 @@ describe("metadata settings", () => {
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
-      targetIndicatorEnabled: false,
+      highlightEnabled: false,
     });
     expect(sdk.player.setMetadata).toHaveBeenCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
+        highlightEnabled: false,
         targetIndicatorEnabled: false,
       },
       [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
@@ -73,7 +74,7 @@ describe("metadata settings", () => {
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
       singleTokenZoom: 1,
-      targetIndicatorEnabled: true,
+      highlightEnabled: true,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
 
@@ -83,7 +84,7 @@ describe("metadata settings", () => {
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
       singleTokenZoom: 0.5,
-      targetIndicatorEnabled: true,
+      highlightEnabled: true,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
   });
@@ -110,7 +111,7 @@ describe("metadata settings", () => {
   it("defaults missing or malformed settings to enabled", () => {
     expect(readPlayerSettings({}).autoFocusEnabled).toBe(true);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
-    expect(readPlayerSettings({}).targetIndicatorEnabled).toBe(true);
+    expect(readPlayerSettings({}).highlightEnabled).toBe(true);
     expect(
       readPlayerSettings({
         [PLAYER_SETTINGS_METADATA_KEY]: { autoFocusEnabled: "yes" },
@@ -141,7 +142,7 @@ describe("metadata settings", () => {
     ).toEqual({
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
-      targetIndicatorEnabled: false,
+      highlightEnabled: false,
     });
     expect(
       readRoomSettings({
@@ -155,7 +156,7 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
-        targetIndicatorEnabled: false,
+        highlightEnabled: false,
       },
     });
 
@@ -164,6 +165,7 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
+        highlightEnabled: false,
         targetIndicatorEnabled: false,
       },
     });
@@ -173,15 +175,17 @@ describe("metadata settings", () => {
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
         singleTokenZoom: 1,
+        highlightEnabled: false,
         targetIndicatorEnabled: false,
       },
     });
 
-    await setPlayerTargetIndicatorEnabled(true);
+    await setPlayerHighlightEnabled(true);
     expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
+        highlightEnabled: true,
         targetIndicatorEnabled: true,
       },
     });

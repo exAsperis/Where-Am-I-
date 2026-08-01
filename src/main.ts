@@ -1,7 +1,7 @@
 import OBR, { type Item, type Player, type Theme } from "@owlbear-rodeo/sdk";
 
 import {
-  FOCUS_BROADCAST_CHANNEL,
+  TARGET_ACTION_BROADCAST_CHANNEL,
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
   PLAYER_POPOVER_MAX_HEIGHT,
@@ -19,10 +19,10 @@ import {
 } from "./domain";
 import {
   focusViewportOnCharacterItems,
-  focusViewportOnPartyCharacters,
   focusViewportOnPlayerCharacters,
-  type FocusResult,
-} from "./focus";
+  highlightCharacterItems,
+  type TargetActionResult,
+} from "./target-actions";
 import {
   getPlayerSettings,
   getRoomSettings,
@@ -31,11 +31,14 @@ import {
   setGlobalEnabled,
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
-  setPlayerTargetIndicatorEnabled,
+  setPlayerHighlightEnabled,
 } from "./metadata";
-import { createFocusCommand } from "./remote-focus";
 import {
-  getGmCharacterToken,
+  createTargetActionCommand,
+  type TargetAction,
+  type TargetRecipient,
+} from "./remote-actions";
+import {
   moveCharacterTokenToViewportCenter,
   toggleCharacterTokenVisibility,
 } from "./token-actions";
@@ -56,7 +59,7 @@ class PopoverController {
   #globalEnabled = true;
   #autoFocusEnabled = true;
   #singleTokenZoom = 0.5;
-  #targetIndicatorEnabled = true;
+  #highlightEnabled = true;
   #players: Player[] = [];
   #items: Item[] = [];
   readonly #expandedPlayerIds = new Set<string>();
@@ -70,6 +73,22 @@ class PopoverController {
 
   async start(): Promise<void> {
     document.documentElement.dataset.release = RELEASE_VERSION;
+    const dismissMenus = (event: PointerEvent): void => {
+      const target = event.target;
+      if (target instanceof Element && target.closest(".action-menu")) return;
+      for (const menu of this.#root.querySelectorAll<HTMLElement>(
+        ".action-menu--open",
+      )) {
+        menu.classList.remove("action-menu--open");
+        menu
+          .querySelector<HTMLElement>("[aria-expanded]")
+          ?.setAttribute("aria-expanded", "false");
+      }
+    };
+    document.addEventListener("pointerdown", dismissMenus);
+    this.#disposeCallbacks.push(() =>
+      document.removeEventListener("pointerdown", dismissMenus),
+    );
 
     try {
       const [role, theme, roomSettings, playerSettings] = await Promise.all([
@@ -82,7 +101,7 @@ class PopoverController {
       this.#globalEnabled = roomSettings.globalEnabled;
       this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
-      this.#targetIndicatorEnabled = playerSettings.targetIndicatorEnabled;
+      this.#highlightEnabled = playerSettings.highlightEnabled;
       this.#applyTheme(theme);
 
       this.#disposeCallbacks.push(
@@ -101,7 +120,7 @@ class PopoverController {
           const settings = readPlayerSettings(player.metadata);
           this.#autoFocusEnabled = settings.autoFocusEnabled;
           this.#singleTokenZoom = settings.singleTokenZoom;
-          this.#targetIndicatorEnabled = settings.targetIndicatorEnabled;
+          this.#highlightEnabled = settings.highlightEnabled;
           this.#render();
         }),
       );
@@ -263,8 +282,8 @@ class PopoverController {
     status.textContent =
       this.#status?.message ??
       (this.#role === "GM"
-        ? "Choose a local location or send a player to their character."
-        : "Only your local viewport moves when you locate yourself.");
+        ? "Choose an action and who should see it."
+        : "Only your local viewport moves when you focus yourself.");
     app.append(status);
 
     this.#root.append(app);
@@ -282,23 +301,23 @@ class PopoverController {
     controls.className = "controls";
 
     controls.append(this.#createZoomField());
-    controls.append(this.#createIndicatorToggle());
+    controls.append(this.#createHighlightToggle());
 
     const toggle = this.#createToggle(
-      "Automatically locate my character",
+      "Automatically focus my character",
       this.#autoFocusEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updatePlayerPreference(enabled),
     );
     controls.append(toggle);
 
-    const locateButton = this.#createButton(
-      this.#busyAction === "locate-self" ? "Locating…" : "Locate me now",
+    const focusButton = this.#createButton(
+      this.#busyAction === "focus-self" ? "Focusing…" : "Focus me now",
       "primary",
       !this.#globalEnabled || this.#busyAction !== undefined,
-      () => void this.#locateSelf(),
+      () => void this.#focusSelf(),
     );
-    controls.append(locateButton);
+    controls.append(focusButton);
 
     const ownedCharacters = filterVisibleOwnedCharacters(
       this.#items,
@@ -323,12 +342,12 @@ class PopoverController {
           identity,
           this.#createButton(
             this.#busyAction === `character-${character.id}`
-              ? "Locating…"
-              : "Locate",
+              ? "Focusing…"
+              : "Focus",
             "small",
             !this.#globalEnabled || this.#busyAction !== undefined,
-            () => void this.#locateCharacter(character.id),
-            `Locate ${characterLabel}`,
+            () => void this.#focusCharacter(character.id),
+            `Focus ${characterLabel}`,
           ),
         );
         list.append(row);
@@ -352,7 +371,7 @@ class PopoverController {
     const controls = document.createElement("div");
     controls.className = "controls";
     controls.append(this.#createZoomField());
-    controls.append(this.#createIndicatorToggle());
+    controls.append(this.#createHighlightToggle());
     controls.append(
       this.#createToggle(
         "Enable Where am I? for players",
@@ -384,16 +403,25 @@ class PopoverController {
     }
 
     controls.append(section);
-    controls.append(
-      this.#createButton(
-        this.#busyAction === "whole-party"
-          ? "Locating party…"
-          : "Locate whole party",
-        "secondary",
-        this.#busyAction !== undefined || this.#players.length === 0,
-        () => void this.#locateWholeParty(),
-      ),
+    const partyTile = document.createElement("section");
+    partyTile.className = "action-tile";
+    const partyTitle = document.createElement("h2");
+    partyTitle.textContent = "Party";
+    const partyActions = document.createElement("div");
+    partyActions.className = "action-menu-row";
+    const connectedIds = new Set(this.#players.map((player) => player.id));
+    const targets = this.#items.filter(
+      (item) =>
+        item.layer === "CHARACTER" &&
+        item.visible &&
+        connectedIds.has(item.createdUserId),
     );
+    partyActions.append(
+      this.#createGmActionMenu("FOCUS", targets, false, undefined, "Party"),
+      this.#createGmActionMenu("HIGHLIGHT", targets, false, undefined, "Party"),
+    );
+    partyTile.append(partyTitle, partyActions);
+    controls.append(partyTile);
     controls.append(this.#renderAllCharacterTokens());
     return controls;
   }
@@ -424,15 +452,24 @@ class PopoverController {
         actions.className = "character-actions character-actions--all";
         const label = getCharacterDisplay(character).characterName;
         actions.append(
-          this.#createButton(
-            this.#busyAction === `locate-token-${character.id}`
-              ? "Locating…"
-              : "Locate",
-            "small",
-            this.#busyAction !== undefined,
-            () => void this.#locateToken(character.id),
-            `Locate ${label}`,
+          this.#createGmActionMenu(
+            "FOCUS",
+            [character],
+            true,
+            undefined,
+            label,
           ),
+          this.#createGmActionMenu(
+            "HIGHLIGHT",
+            [character],
+            true,
+            undefined,
+            label,
+          ),
+        );
+        const management = document.createElement("div");
+        management.className = "token-management-actions";
+        management.append(
           this.#createButton(
             this.#busyAction === `visibility-token-${character.id}`
               ? "Updating…"
@@ -454,6 +491,7 @@ class PopoverController {
             `Move ${label} to the center of the viewport`,
           ),
         );
+        actions.append(management);
         row.append(display, actions);
         list.append(row);
       }
@@ -488,22 +526,22 @@ class PopoverController {
 
     const actions = document.createElement("div");
     actions.className = "row-actions";
+    const playerTargets = filterVisibleOwnedCharacters(this.#items, player.id);
+    const playerLabel = formatPlayerName(player.id, player.name);
     actions.append(
-      this.#createButton(
-        this.#busyAction === `send-${player.id}`
-          ? "Sending…"
-          : "Send to character",
-        "small",
-        !this.#globalEnabled || this.#busyAction !== undefined,
-        () => void this.#sendToPlayer(player.id),
+      this.#createGmActionMenu(
+        "FOCUS",
+        playerTargets,
+        false,
+        player.id,
+        playerLabel,
       ),
-      this.#createButton(
-        this.#busyAction === `locate-${player.id}`
-          ? "Locating…"
-          : "Locate character",
-        "small",
-        this.#busyAction !== undefined,
-        () => void this.#locatePlayer(player.id),
+      this.#createGmActionMenu(
+        "HIGHLIGHT",
+        playerTargets,
+        false,
+        player.id,
+        playerLabel,
       ),
     );
 
@@ -529,23 +567,19 @@ class PopoverController {
         const characterActions = document.createElement("div");
         characterActions.className = "character-actions";
         characterActions.append(
-          this.#createButton(
-            this.#busyAction === `send-${player.id}-${character.id}`
-              ? "Sending…"
-              : "Send",
-            "small",
-            !this.#globalEnabled || this.#busyAction !== undefined,
-            () => void this.#sendToPlayer(player.id, character.id),
-            `Send ${characterLabel} to ${formatPlayerName(player.id, player.name)}`,
+          this.#createGmActionMenu(
+            "FOCUS",
+            [character],
+            false,
+            player.id,
+            characterLabel,
           ),
-          this.#createButton(
-            this.#busyAction === `locate-${player.id}-${character.id}`
-              ? "Locating…"
-              : "Locate",
-            "small",
-            this.#busyAction !== undefined,
-            () => void this.#locatePlayer(player.id, character.id),
-            `Locate ${characterLabel}`,
+          this.#createGmActionMenu(
+            "HIGHLIGHT",
+            [character],
+            false,
+            player.id,
+            characterLabel,
           ),
         );
         characterRow.append(name, characterActions);
@@ -603,6 +637,101 @@ class PopoverController {
     return identity;
   }
 
+  #createGmActionMenu(
+    action: TargetAction,
+    targets: readonly Item[],
+    includeHidden: boolean,
+    controllingPlayerId: string | undefined,
+    targetLabel: string,
+  ): HTMLElement {
+    const container = document.createElement("div");
+    container.className = "action-menu";
+    const trigger = this.#createButton(
+      action === "FOCUS" ? "Focus ▾" : "Highlight ▾",
+      "small",
+      this.#busyAction !== undefined || targets.length === 0,
+      () => {
+        const open = container.classList.toggle("action-menu--open");
+        trigger.setAttribute("aria-expanded", String(open));
+        if (open) {
+          container
+            .querySelector<HTMLButtonElement>('[role="menuitem"]')
+            ?.focus();
+        }
+      },
+      `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel}`,
+    );
+    trigger.setAttribute("aria-haspopup", "menu");
+    trigger.setAttribute("aria-expanded", "false");
+    const menu = document.createElement("div");
+    menu.className = "action-menu__items";
+    menu.setAttribute("role", "menu");
+    const recipients: Array<{ label: string; recipient?: TargetRecipient }> = [
+      { label: "Me" },
+      ...(controllingPlayerId
+        ? [
+            {
+              label: "Player",
+              recipient: {
+                scope: "PLAYER" as const,
+                playerId: controllingPlayerId,
+              },
+            },
+          ]
+        : []),
+      { label: "Party", recipient: { scope: "PARTY" } },
+    ];
+    for (const option of recipients) {
+      const item = this.#createButton(
+        option.label,
+        "small",
+        option.recipient !== undefined && !this.#globalEnabled,
+        () => {
+          container.classList.remove("action-menu--open");
+          trigger.setAttribute("aria-expanded", "false");
+          void this.#performGmTargetAction(
+            action,
+            option.recipient,
+            targets,
+            includeHidden,
+          );
+        },
+        `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel} for ${option.label}`,
+      );
+      item.setAttribute("role", "menuitem");
+      menu.append(item);
+    }
+    container.addEventListener("keydown", (event) => {
+      const items = [
+        ...menu.querySelectorAll<HTMLButtonElement>(
+          '[role="menuitem"]:not(:disabled)',
+        ),
+      ];
+      const index = items.indexOf(document.activeElement as HTMLButtonElement);
+      if (event.key === "Escape") {
+        container.classList.remove("action-menu--open");
+        trigger.setAttribute("aria-expanded", "false");
+        trigger.focus();
+      } else if (event.key === "ArrowDown" && items.length > 0) {
+        event.preventDefault();
+        items[(index + 1) % items.length]?.focus();
+      } else if (event.key === "ArrowUp" && items.length > 0) {
+        event.preventDefault();
+        items[(index - 1 + items.length) % items.length]?.focus();
+      }
+    });
+    container.addEventListener("focusout", () => {
+      queueMicrotask(() => {
+        if (!container.contains(document.activeElement)) {
+          container.classList.remove("action-menu--open");
+          trigger.setAttribute("aria-expanded", "false");
+        }
+      });
+    });
+    container.append(trigger, menu);
+    return container;
+  }
+
   #createToggle(
     labelText: string,
     checked: boolean,
@@ -655,12 +784,12 @@ class PopoverController {
     return label;
   }
 
-  #createIndicatorToggle(): HTMLLabelElement {
+  #createHighlightToggle(): HTMLLabelElement {
     return this.#createToggle(
-      "Show target indicators",
-      this.#targetIndicatorEnabled,
+      "Show highlights",
+      this.#highlightEnabled,
       this.#busyAction !== undefined,
-      (enabled) => void this.#updateTargetIndicatorPreference(enabled),
+      (enabled) => void this.#updateHighlightPreference(enabled),
     );
   }
 
@@ -713,8 +842,8 @@ class PopoverController {
       this.#autoFocusEnabled = enabled;
       this.#status = {
         message: enabled
-          ? "Automatic locating is enabled."
-          : "Automatic locating is disabled. Locate me now remains available.",
+          ? "Automatic focusing is enabled."
+          : "Automatic focusing is disabled. Focus me now remains available.",
         tone: "success",
       };
     });
@@ -731,14 +860,14 @@ class PopoverController {
     });
   }
 
-  async #updateTargetIndicatorPreference(enabled: boolean): Promise<void> {
-    await this.#runAction("indicator-setting", async () => {
-      await setPlayerTargetIndicatorEnabled(enabled);
-      this.#targetIndicatorEnabled = enabled;
+  async #updateHighlightPreference(enabled: boolean): Promise<void> {
+    await this.#runAction("highlight-setting", async () => {
+      await setPlayerHighlightEnabled(enabled);
+      this.#highlightEnabled = enabled;
       this.#status = {
         message: enabled
-          ? "Target indicators are enabled."
-          : "Target indicators are disabled.",
+          ? "Highlights are enabled."
+          : "Highlights are disabled.",
         tone: "success",
       };
     });
@@ -751,114 +880,81 @@ class PopoverController {
       this.#status = {
         message: enabled
           ? "Player focusing is enabled."
-          : "Player focusing is disabled. GM-local locating remains available.",
+          : "Player focusing is disabled. GM-local focusing remains available.",
         tone: "success",
       };
     });
   }
 
-  async #locateSelf(): Promise<void> {
-    await this.#runAction("locate-self", async () => {
+  async #focusSelf(): Promise<void> {
+    await this.#runAction("focus-self", async () => {
       if (!(await this.#confirmGlobalEnabled())) {
         return;
       }
-      this.#setFocusStatus(
+      this.#setTargetActionStatus(
         await focusViewportOnPlayerCharacters(
           OBR.player.id,
           this.#singleTokenZoom,
-          this.#targetIndicatorEnabled,
+          this.#highlightEnabled,
         ),
       );
     });
   }
 
-  async #locateCharacter(characterId: string): Promise<void> {
+  async #focusCharacter(characterId: string): Promise<void> {
     await this.#runAction(`character-${characterId}`, async () => {
       if (!(await this.#confirmGlobalEnabled())) {
         return;
       }
-      this.#setFocusStatus(
+      this.#setTargetActionStatus(
         await focusViewportOnCharacterItems(
           [characterId],
           this.#singleTokenZoom,
-          this.#targetIndicatorEnabled,
+          this.#highlightEnabled,
         ),
       );
     });
   }
 
-  async #sendToPlayer(
-    playerId: string,
-    targetCharacterId?: string,
+  async #performGmTargetAction(
+    action: TargetAction,
+    recipient: TargetRecipient | undefined,
+    targets: readonly Item[],
+    includeHidden: boolean,
   ): Promise<void> {
-    const action = targetCharacterId
-      ? `send-${playerId}-${targetCharacterId}`
-      : `send-${playerId}`;
-    await this.#runAction(action, async () => {
-      if (!(await this.#confirmGlobalEnabled())) {
+    const actionId = `${action.toLowerCase()}-${recipient?.scope.toLowerCase() ?? "me"}`;
+    await this.#runAction(actionId, async () => {
+      if (recipient) {
+        if (!(await this.#confirmGlobalEnabled())) return;
+        if ((await OBR.player.getRole()) !== "GM") {
+          throw new Error("Only a GM can send a remote target action.");
+        }
+        await OBR.broadcast.sendMessage(
+          TARGET_ACTION_BROADCAST_CHANNEL,
+          createTargetActionCommand(
+            action,
+            recipient,
+            targets.map((target) => target.id),
+            includeHidden,
+          ),
+          { destination: "REMOTE" },
+        );
+        this.#status = {
+          message: `${action === "FOCUS" ? "Focus" : "Highlight"} sent to ${recipient.scope === "PARTY" ? "the party" : "the player"}.`,
+          tone: "success",
+        };
         return;
       }
-      if ((await OBR.player.getRole()) !== "GM") {
-        throw new Error("Only a GM can send a remote focus command.");
-      }
-      await OBR.broadcast.sendMessage(
-        FOCUS_BROADCAST_CHANNEL,
-        createFocusCommand(playerId, targetCharacterId),
-        { destination: "REMOTE" },
-      );
-      this.#status = {
-        message: "Remote focus command sent.",
-        tone: "success",
-      };
-    });
-  }
-
-  async #locatePlayer(
-    playerId: string,
-    targetCharacterId?: string,
-  ): Promise<void> {
-    const action = targetCharacterId
-      ? `locate-${playerId}-${targetCharacterId}`
-      : `locate-${playerId}`;
-    await this.#runAction(action, async () => {
-      this.#setFocusStatus(
-        await focusViewportOnPlayerCharacters(
-          playerId,
-          this.#singleTokenZoom,
-          this.#targetIndicatorEnabled,
-          targetCharacterId,
-        ),
-      );
-    });
-  }
-
-  async #locateWholeParty(): Promise<void> {
-    await this.#runAction("whole-party", async () => {
-      const currentPlayers = groupPlayerConnections(
-        await OBR.party.getPlayers(),
-      );
-      this.#players = currentPlayers;
-      this.#setFocusStatus(
-        await focusViewportOnPartyCharacters(
-          new Set(currentPlayers.map((player) => player.id)),
-          this.#singleTokenZoom,
-          this.#targetIndicatorEnabled,
-        ),
-      );
-    });
-  }
-
-  async #locateToken(characterId: string): Promise<void> {
-    await this.#runAction(`locate-token-${characterId}`, async () => {
-      const character = await getGmCharacterToken(characterId);
-      this.#setFocusStatus(
-        await focusViewportOnCharacterItems(
-          [character],
-          this.#singleTokenZoom,
-          this.#targetIndicatorEnabled,
-          true,
-        ),
-      );
+      const result =
+        action === "HIGHLIGHT"
+          ? await highlightCharacterItems(targets, includeHidden)
+          : await focusViewportOnCharacterItems(
+              targets,
+              this.#singleTokenZoom,
+              this.#highlightEnabled,
+              includeHidden,
+            );
+      this.#setTargetActionStatus(result, action);
     });
   }
 
@@ -894,13 +990,20 @@ class PopoverController {
     return enabled;
   }
 
-  #setFocusStatus(result: FocusResult): void {
+  #setTargetActionStatus(
+    result: TargetActionResult,
+    action: TargetAction = "FOCUS",
+  ): void {
     if (result.ok) {
       this.#status = {
         message:
           result.itemCount === 1
-            ? "Character centered."
-            : `${result.itemCount} characters framed together.`,
+            ? action === "FOCUS"
+              ? "Character focused."
+              : "Character highlighted."
+            : action === "FOCUS"
+              ? `${result.itemCount} characters focused together.`
+              : `${result.itemCount} characters highlighted.`,
         tone: "success",
       };
       return;

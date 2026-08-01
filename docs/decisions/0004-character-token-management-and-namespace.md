@@ -22,12 +22,12 @@ identifier.
   enablement in room metadata so settings remain room-persistent.
 - Render Character-layer rows with token artwork, optional token-associated
   text, and the character item name.
-- Give GMs a collapsed scene-wide Character-token list with local locate,
-  shared visibility, and shared position controls. Scene-wide locating may
-  target hidden tokens, while player and party locating remains visible-only.
+- Give GMs a collapsed scene-wide Character-token list with local focus,
+  shared visibility, and shared position controls. Scene-wide focus may target
+  hidden tokens, while player and party focus remains visible-only.
 
 ## Consequences
 
 Existing rooms retain valid preferences after upgrading. GM visibility and
-movement actions intentionally mutate shared scene items, while locating
+movement actions intentionally mutate shared scene items, while focusing
 continues to affect only the initiating GM's viewport.

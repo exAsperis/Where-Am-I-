@@ -1,4 +1,4 @@
-# 0003: Client-local target indicators and targeted remote focus
+# 0003: Client-local highlights and targeted remote focus
 
 Date: 2026-07-27
 
@@ -14,7 +14,7 @@ a player who controls several.
 
 Where am I? renders target animations as temporary `OBR.scene.local` circle
 items. Each client applies its own player-metadata preference, and the
-indicators are created, animated, and removed only on that client.
+highlights are created, animated, and removed only on that client.
 
 Remote focus commands may include an optional target character ID. Receivers
 re-fetch the target and require it to be visible, on the Character layer, and
@@ -23,8 +23,8 @@ existing all-owned-characters behavior.
 
 ## Consequences
 
-- Indicators are private and never alter shared scene content.
-- GM **Send** respects the receiving player's indicator preference.
+- Highlights are private and never alter shared scene content.
+- GM-sent Focus respects the receiving player's highlight preference.
 - Stable local shape APIs provide animation without relying on experimental
   effects.
 - Animation failures can be isolated from viewport focus and cleaned up.

@@ -4,7 +4,7 @@ import {
   DEFAULT_GLOBAL_ENABLED,
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
-  DEFAULT_TARGET_INDICATOR_ENABLED,
+  DEFAULT_HIGHLIGHT_ENABLED,
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
@@ -15,7 +15,7 @@ import { normalizeZoomScale } from "./domain";
 export interface PlayerSettings {
   autoFocusEnabled: boolean;
   singleTokenZoom: number;
-  targetIndicatorEnabled: boolean;
+  highlightEnabled: boolean;
 }
 
 export interface RoomSettings {
@@ -74,14 +74,12 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
       "singleTokenZoom" in settings
         ? normalizeZoomScale(settings.singleTokenZoom)
         : DEFAULT_SINGLE_TOKEN_ZOOM,
-    targetIndicatorEnabled: readBooleanSetting(
-      metadata,
-      metadata[PLAYER_SETTINGS_METADATA_KEY] == null
-        ? LEGACY_PLAYER_SETTINGS_METADATA_KEY
-        : PLAYER_SETTINGS_METADATA_KEY,
-      "targetIndicatorEnabled",
-      DEFAULT_TARGET_INDICATOR_ENABLED,
-    ),
+    highlightEnabled:
+      typeof settings.highlightEnabled === "boolean"
+        ? settings.highlightEnabled
+        : typeof settings.targetIndicatorEnabled === "boolean"
+          ? settings.targetIndicatorEnabled
+          : DEFAULT_HIGHLIGHT_ENABLED,
   };
 }
 
@@ -108,7 +106,10 @@ export async function getPlayerSettings(): Promise<PlayerSettings> {
     isValidLegacyPlayerSettings(metadata[LEGACY_PLAYER_SETTINGS_METADATA_KEY])
   ) {
     await OBR.player.setMetadata({
-      [PLAYER_SETTINGS_METADATA_KEY]: settings,
+      [PLAYER_SETTINGS_METADATA_KEY]: {
+        ...settings,
+        targetIndicatorEnabled: settings.highlightEnabled,
+      },
       [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
     });
   }
@@ -123,6 +124,8 @@ export async function updatePlayerSettings(
     [PLAYER_SETTINGS_METADATA_KEY]: {
       ...current,
       ...update,
+      targetIndicatorEnabled:
+        update.highlightEnabled ?? current.highlightEnabled,
       singleTokenZoom: normalizeZoomScale(
         update.singleTokenZoom ?? current.singleTokenZoom,
       ),
@@ -142,10 +145,10 @@ export async function setPlayerSingleTokenZoom(
   await updatePlayerSettings({ singleTokenZoom });
 }
 
-export async function setPlayerTargetIndicatorEnabled(
-  targetIndicatorEnabled: boolean,
+export async function setPlayerHighlightEnabled(
+  highlightEnabled: boolean,
 ): Promise<void> {
-  await updatePlayerSettings({ targetIndicatorEnabled });
+  await updatePlayerSettings({ highlightEnabled });
 }
 
 export async function getRoomSettings(): Promise<RoomSettings> {
