@@ -5,6 +5,7 @@ import {
   FOCUS_HIGHLIGHT_DELAY_MS,
 } from "./constants";
 import {
+  calculateHighlightFitScale,
   createBoundsForZoom,
   capBoundsZoom,
   filterVisibleOwnedCharacters,
@@ -68,6 +69,31 @@ function waitForFocusHighlight(): Promise<void> {
   });
 }
 
+async function zoomOutToShowHighlightTargets(items: readonly Item[]) {
+  try {
+    const ids = items.map((item) => item.id);
+    const [bounds, position, scale, width, height] = await Promise.all([
+      OBR.scene.items.getItemBounds(ids),
+      OBR.viewport.getPosition(),
+      OBR.viewport.getScale(),
+      OBR.viewport.getWidth(),
+      OBR.viewport.getHeight(),
+    ]);
+    const fitScale = calculateHighlightFitScale(
+      bounds,
+      position,
+      scale,
+      width,
+      height,
+    );
+    if (fitScale !== undefined) {
+      await OBR.viewport.animateTo({ position, scale: fitScale });
+    }
+  } catch (error) {
+    console.error("Where am I? could not fit Highlight targets.", error);
+  }
+}
+
 export async function highlightItems(
   itemsOrIds: readonly Item[] | readonly string[],
   color?: string,
@@ -78,6 +104,7 @@ export async function highlightItems(
     }
     const items = await resolveItems(itemsOrIds);
     if (items.length === 0) return { ok: false, reason: "NOT_FOUND" };
+    await zoomOutToShowHighlightTargets(items);
     await showHighlights(items, true, color);
     return { ok: true, itemCount: items.length };
   } catch (error) {
@@ -99,6 +126,7 @@ export async function highlightCharacterItems(
     if (items.length === 0) {
       return { ok: false, reason: "NOT_FOUND" };
     }
+    await zoomOutToShowHighlightTargets(items);
     await showHighlights(items, true, color);
     return { ok: true, itemCount: items.length };
   } catch (error) {

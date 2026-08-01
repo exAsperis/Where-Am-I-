@@ -331,6 +331,55 @@ export function capBoundsZoom(
   };
 }
 
+export function calculateHighlightFitScale(
+  targetBounds: BoundingBox,
+  viewportPosition: Vector2,
+  currentScale: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): number | undefined {
+  const values = [
+    targetBounds.min.x,
+    targetBounds.min.y,
+    targetBounds.max.x,
+    targetBounds.max.y,
+    viewportPosition.x,
+    viewportPosition.y,
+    currentScale,
+    viewportWidth,
+    viewportHeight,
+  ];
+  if (
+    values.some((value) => !Number.isFinite(value)) ||
+    currentScale <= 0 ||
+    viewportWidth <= 0 ||
+    viewportHeight <= 0 ||
+    targetBounds.max.x < targetBounds.min.x ||
+    targetBounds.max.y < targetBounds.min.y
+  ) {
+    return undefined;
+  }
+
+  const requiredHalfWidth = Math.max(
+    Math.abs(targetBounds.min.x - viewportPosition.x),
+    Math.abs(targetBounds.max.x - viewportPosition.x),
+  );
+  const requiredHalfHeight = Math.max(
+    Math.abs(targetBounds.min.y - viewportPosition.y),
+    Math.abs(targetBounds.max.y - viewportPosition.y),
+  );
+  const horizontalScale =
+    requiredHalfWidth === 0
+      ? currentScale
+      : viewportWidth / (requiredHalfWidth * 2);
+  const verticalScale =
+    requiredHalfHeight === 0
+      ? currentScale
+      : viewportHeight / (requiredHalfHeight * 2);
+  const fitScale = Math.min(currentScale, horizontalScale, verticalScale);
+  return fitScale < currentScale ? fitScale : undefined;
+}
+
 export function resolveEnablement(
   globalEnabled: boolean,
   playerAutoFocusEnabled: boolean,

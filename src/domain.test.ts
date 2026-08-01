@@ -2,6 +2,7 @@ import type { Item } from "@owlbear-rodeo/sdk";
 import { describe, expect, it } from "vitest";
 
 import {
+  calculateHighlightFitScale,
   calculatePadding,
   capBoundsZoom,
   createBoundsForZoom,
@@ -282,6 +283,91 @@ describe("viewport framing", () => {
       height: 1200,
       center: { x: 100, y: 50 },
     });
+  });
+
+  it("does not change Highlight zoom when target bounds already fit", () => {
+    expect(
+      calculateHighlightFitScale(
+        {
+          min: { x: -800, y: -600 },
+          max: { x: 800, y: 600 },
+          width: 1600,
+          height: 1200,
+          center: { x: 0, y: 0 },
+        },
+        { x: 0, y: 0 },
+        0.5,
+        800,
+        600,
+      ),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    [{ min: { x: -800, y: -600 }, max: { x: 1_000, y: 600 } }, 0.4],
+    [{ min: { x: -1_000, y: -600 }, max: { x: 800, y: 600 } }, 0.4],
+    [{ min: { x: -800, y: -600 }, max: { x: 800, y: 750 } }, 0.4],
+    [{ min: { x: -800, y: -750 }, max: { x: 800, y: 600 } }, 0.4],
+    [{ min: { x: -1_000, y: -750 }, max: { x: 1_000, y: 750 } }, 0.4],
+  ])(
+    "zooms out only enough for bounds beyond viewport edges",
+    (edges, scale) => {
+      expect(
+        calculateHighlightFitScale(
+          {
+            ...edges,
+            width: edges.max.x - edges.min.x,
+            height: edges.max.y - edges.min.y,
+            center: {
+              x: (edges.min.x + edges.max.x) / 2,
+              y: (edges.min.y + edges.max.y) / 2,
+            },
+          },
+          { x: 0, y: 0 },
+          0.5,
+          800,
+          600,
+        ),
+      ).toBeCloseTo(scale);
+    },
+  );
+
+  it("uses the limiting axis for wide and tall viewports", () => {
+    const bounds = {
+      min: { x: -1_000, y: -1_000 },
+      max: { x: 1_000, y: 1_000 },
+      width: 2_000,
+      height: 2_000,
+      center: { x: 0, y: 0 },
+    };
+    expect(
+      calculateHighlightFitScale(bounds, { x: 0, y: 0 }, 1, 1_600, 600),
+    ).toBeCloseTo(0.3);
+    expect(
+      calculateHighlightFitScale(bounds, { x: 0, y: 0 }, 1, 600, 1_600),
+    ).toBeCloseTo(0.3);
+  });
+
+  it("rejects malformed Highlight viewport inputs", () => {
+    const bounds = {
+      min: { x: 0, y: 0 },
+      max: { x: 100, y: 100 },
+      width: 100,
+      height: 100,
+      center: { x: 50, y: 50 },
+    };
+    expect(
+      calculateHighlightFitScale(bounds, { x: 0, y: 0 }, 0, 800, 600),
+    ).toBeUndefined();
+    expect(
+      calculateHighlightFitScale(
+        bounds,
+        { x: Number.NaN, y: 0 },
+        0.5,
+        800,
+        600,
+      ),
+    ).toBeUndefined();
   });
 
   it("normalizes malformed and out-of-range zoom preferences", () => {

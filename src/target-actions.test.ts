@@ -13,7 +13,10 @@ const sdk = vi.hoisted(() => ({
     },
   },
   viewport: {
+    animateTo: vi.fn(),
     animateToBounds: vi.fn(),
+    getPosition: vi.fn(),
+    getScale: vi.fn(),
     getWidth: vi.fn(),
     getHeight: vi.fn(),
   },
@@ -66,6 +69,9 @@ describe("viewport focus service", () => {
       center: { x: 50, y: 50 },
     });
     sdk.viewport.animateToBounds.mockResolvedValue(undefined);
+    sdk.viewport.animateTo.mockResolvedValue(undefined);
+    sdk.viewport.getPosition.mockResolvedValue({ x: 50, y: 50 });
+    sdk.viewport.getScale.mockResolvedValue(0.5);
     sdk.viewport.getWidth.mockResolvedValue(800);
     sdk.viewport.getHeight.mockResolvedValue(600);
     highlight.showHighlights.mockResolvedValue(undefined);
@@ -158,7 +164,7 @@ describe("viewport focus service", () => {
     errorLog.mockRestore();
   });
 
-  it("highlights explicitly without reading or moving the viewport", async () => {
+  it("does not mutate the viewport when Highlight targets already fit", async () => {
     await expect(
       highlightCharacterItems([item("one")], false, "#123456"),
     ).resolves.toEqual({
@@ -170,9 +176,51 @@ describe("viewport focus service", () => {
       true,
       "#123456",
     );
-    expect(sdk.scene.items.getItemBounds).not.toHaveBeenCalled();
-    expect(sdk.viewport.getWidth).not.toHaveBeenCalled();
+    expect(sdk.scene.items.getItemBounds).toHaveBeenCalledWith(["one"]);
+    expect(sdk.viewport.getWidth).toHaveBeenCalled();
+    expect(sdk.viewport.animateTo).not.toHaveBeenCalled();
     expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
+  });
+
+  it("zooms out at the same viewport position before explicit Highlight", async () => {
+    sdk.scene.items.getItemBounds.mockResolvedValueOnce({
+      min: { x: -1_000, y: -600 },
+      max: { x: 1_000, y: 600 },
+      width: 2_000,
+      height: 1_200,
+      center: { x: 0, y: 0 },
+    });
+    sdk.viewport.getPosition.mockResolvedValueOnce({ x: 0, y: 0 });
+
+    await expect(highlightItems([item("one")], "#123456")).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+
+    expect(sdk.viewport.animateTo).toHaveBeenCalledWith({
+      position: { x: 0, y: 0 },
+      scale: 0.4,
+    });
+    expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
+    expect(sdk.viewport.animateTo.mock.invocationCallOrder[0]).toBeLessThan(
+      highlight.showHighlights.mock.invocationCallOrder[0] ?? Infinity,
+    );
+  });
+
+  it("still highlights when zoom-only viewport adjustment fails", async () => {
+    const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
+    sdk.viewport.getScale.mockRejectedValueOnce(new Error("viewport missing"));
+
+    await expect(highlightCharacterItems([item("one")])).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+    expect(highlight.showHighlights).toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      "Where am I? could not fit Highlight targets.",
+      expect.any(Error),
+    );
+    errorLog.mockRestore();
   });
 
   it("focuses and highlights non-character items for GM context actions", async () => {
