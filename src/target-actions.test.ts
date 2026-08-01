@@ -272,17 +272,17 @@ describe("viewport focus service", () => {
     expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
   });
 
-  it("rejects a pending all-item action if a target is hidden again", async () => {
+  it("accepts a complete pending target set while local visibility catches up", async () => {
     const hidden = item("hidden", { layer: "PROP", visible: false });
     await expect(highlightItems([hidden], undefined, true)).resolves.toEqual({
-      ok: false,
-      reason: "NOT_FOUND",
+      ok: true,
+      itemCount: 1,
     });
     await expect(
       focusViewportOnItems([hidden], 0.5, true, undefined, true),
-    ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
-    expect(sdk.viewport.animateTo).not.toHaveBeenCalled();
-    expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
+    ).resolves.toEqual({ ok: true, itemCount: 1 });
+    expect(highlight.showHighlights).toHaveBeenCalled();
+    expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
   });
 
   it("rejects a pending all-item action if any original target was deleted", async () => {

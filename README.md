@@ -223,6 +223,9 @@ connection:
     showing the targets, then confirm the group waits and uses the Party
     connected when eligibility returns. Repeat with two GM clients and verify
     players execute each group once.
+39. Reveal a pending target while observing a player client under network
+    latency. Confirm the action executes even if the action broadcast reaches
+    that client just before its local visibility update.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

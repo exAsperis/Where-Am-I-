@@ -23,6 +23,9 @@ selected target, action, or visual confirmation of the pending work.
   actions are disabled or no non-GM player is connected.
 - Elect one connected GM background deterministically to broadcast ready
   groups, with a stable request ID as receiver-side duplicate protection.
+- Revalidate visibility on the elected GM immediately before broadcasting.
+  Receiving clients require the complete target set but do not reject a target
+  merely because their local visibility replica lags behind the broadcast.
 - Keep for Me actions immediate and client-local. Use fixed orange UI markers
   and GM-only configuration, conflict, and cancellation notifications.
 

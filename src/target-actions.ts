@@ -64,7 +64,7 @@ async function resolveItems(
       : [...(itemsOrIds as readonly Item[])];
 }
 
-function allRequestedItemsAreVisible(
+function allRequestedItemsWereResolved(
   itemsOrIds: readonly Item[] | readonly string[],
   items: readonly Item[],
 ): boolean {
@@ -73,9 +73,7 @@ function allRequestedItemsAreVisible(
       typeof itemOrId === "string" ? itemOrId : itemOrId.id,
     ),
   );
-  return (
-    items.length === expectedIds.size && items.every((item) => item.visible)
-  );
+  return items.length === expectedIds.size;
 }
 
 function waitForFocusHighlight(): Promise<void> {
@@ -137,7 +135,7 @@ export async function highlightItems(
     }
     const items = await resolveItems(itemsOrIds);
     if (items.length === 0) return { ok: false, reason: "NOT_FOUND" };
-    if (requireVisible && !allRequestedItemsAreVisible(itemsOrIds, items)) {
+    if (requireVisible && !allRequestedItemsWereResolved(itemsOrIds, items)) {
       return { ok: false, reason: "NOT_FOUND" };
     }
     await zoomOutToShowHighlightTargets(items);
@@ -223,7 +221,7 @@ async function focusViewportOnItemsInternal(
     if (items.length === 0) {
       return { ok: false, reason: "NOT_FOUND" };
     }
-    if (requireVisible && !allRequestedItemsAreVisible(itemsOrIds, items)) {
+    if (requireVisible && !allRequestedItemsWereResolved(itemsOrIds, items)) {
       return { ok: false, reason: "NOT_FOUND" };
     }
     const ids = items.map((item) => item.id);
