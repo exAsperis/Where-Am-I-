@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.4
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.6.4
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.0
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.0
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,15 +15,16 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.4)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.0)
 
 ## For players
 
 - Automatically focus your character when joining or changing scenes.
 - Focus all of your characters together whenever you choose.
 - Pick one named character from your personal list when you own several.
-- Set and save your preferred single-character zoom.
-- Optionally show a private orange highlight when characters are focused.
+- Set and save your preferred single-character zoom, which also caps how close
+  multi-character focus can zoom.
+- Choose the shared GM highlight color or a persistent personal custom color.
 - Collapse Settings and retain its state for the next time the panel opens.
 
 ## For GMs
@@ -36,6 +37,7 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
   them.
 - Focus or highlight any context-menu selection for the whole party.
 - Keep personal zoom and highlight preferences.
+- Set the room's shared highlight color, which defaults to orange.
 
 Only visible items on the Character layer are included. Ownership is determined
 by the player who created the token. When a player owns multiple characters,
@@ -47,7 +49,8 @@ Where am I? has no backend, accounts, analytics, or external data storage.
 Preferences use namespaced Owlbear Rodeo player metadata, the global enablement
 setting uses room metadata, and remote GM requests use Owlbear Rodeo broadcasts.
 Highlights are temporary client-local scene items, so each recipient sees only
-their own highlight animation.
+their own highlight animation. Players also receive a concise toast identifying
+the GM action and its target.
 
 ## Support
 

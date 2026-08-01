@@ -209,6 +209,19 @@ describe("highlight geometry", () => {
     expect(sdk.scene.local.addItems).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the resolved highlight color", async () => {
+    await showHighlights([character], true, "#123456");
+
+    expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
+      expect.objectContaining({
+        style: expect.objectContaining({
+          fillColor: "#123456",
+          strokeColor: "#123456",
+        }),
+      }),
+    ]);
+  });
+
   it("creates and animates one local highlight for every target", async () => {
     const secondCharacter = {
       ...character,

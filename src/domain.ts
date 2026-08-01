@@ -200,6 +200,37 @@ export function padBounds(
   };
 }
 
+export function capBoundsZoom(
+  bounds: BoundingBox,
+  zoomScale: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): BoundingBox {
+  const cap = createBoundsForZoom(
+    bounds.center,
+    zoomScale,
+    viewportWidth,
+    viewportHeight,
+  );
+  const min = {
+    x: Math.min(bounds.min.x, cap.min.x),
+    y: Math.min(bounds.min.y, cap.min.y),
+  };
+  const max = {
+    x: Math.max(bounds.max.x, cap.max.x),
+    y: Math.max(bounds.max.y, cap.max.y),
+  };
+  const width = max.x - min.x;
+  const height = max.y - min.y;
+  return {
+    min,
+    max,
+    width,
+    height,
+    center: { x: min.x + width / 2, y: min.y + height / 2 },
+  };
+}
+
 export function resolveEnablement(
   globalEnabled: boolean,
   playerAutoFocusEnabled: boolean,

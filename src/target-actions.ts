@@ -6,6 +6,7 @@ import {
 } from "./constants";
 import {
   createBoundsForZoom,
+  capBoundsZoom,
   filterVisibleOwnedCharacters,
   filterVisiblePartyCharacters,
   isCharacter,
@@ -69,6 +70,7 @@ function waitForFocusHighlight(): Promise<void> {
 
 export async function highlightItems(
   itemsOrIds: readonly Item[] | readonly string[],
+  color?: string,
 ): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -76,7 +78,7 @@ export async function highlightItems(
     }
     const items = await resolveItems(itemsOrIds);
     if (items.length === 0) return { ok: false, reason: "NOT_FOUND" };
-    await showHighlights(items, true);
+    await showHighlights(items, true, color);
     return { ok: true, itemCount: items.length };
   } catch (error) {
     console.error("Where am I? failed to highlight items.", error);
@@ -87,6 +89,7 @@ export async function highlightItems(
 export async function highlightCharacterItems(
   itemsOrIds: readonly Item[] | readonly string[],
   includeHidden = false,
+  color?: string,
 ): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -96,7 +99,7 @@ export async function highlightCharacterItems(
     if (items.length === 0) {
       return { ok: false, reason: "NOT_FOUND" };
     }
-    await showHighlights(items, true);
+    await showHighlights(items, true, color);
     return { ok: true, itemCount: items.length };
   } catch (error) {
     console.error("Where am I? failed to highlight characters.", error);
@@ -109,12 +112,14 @@ export async function focusViewportOnCharacterItems(
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   highlightEnabled = true,
   includeHidden = false,
+  highlightColor?: string,
 ): Promise<TargetActionResult> {
   return focusViewportOnItemsInternal(
     itemsOrIds,
     singleTokenZoom,
     highlightEnabled,
     includeHidden,
+    highlightColor,
   );
 }
 
@@ -122,12 +127,14 @@ export async function focusViewportOnItems(
   itemsOrIds: readonly Item[] | readonly string[],
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   highlightEnabled = true,
+  highlightColor?: string,
 ): Promise<TargetActionResult> {
   return focusViewportOnItemsInternal(
     itemsOrIds,
     singleTokenZoom,
     highlightEnabled,
     undefined,
+    highlightColor,
   );
 }
 
@@ -136,6 +143,7 @@ async function focusViewportOnItemsInternal(
   singleTokenZoom: number,
   highlightEnabled: boolean,
   includeHidden: boolean | undefined,
+  highlightColor: string | undefined,
 ): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -152,7 +160,7 @@ async function focusViewportOnItemsInternal(
     const bounds = await OBR.scene.items.getItemBounds(ids);
     if (!highlightEnabled) {
       try {
-        await showHighlights(items, false);
+        await showHighlights(items, false, highlightColor);
       } catch (error) {
         console.error("Where am I? highlight cleanup failed.", error);
       }
@@ -166,13 +174,24 @@ async function focusViewportOnItemsInternal(
         createBoundsForZoom(bounds.center, singleTokenZoom, width, height),
       );
     } else {
-      const gridDpi = await OBR.scene.grid.getDpi();
-      await OBR.viewport.animateToBounds(padBounds(bounds, gridDpi));
+      const [gridDpi, viewportWidth, viewportHeight] = await Promise.all([
+        OBR.scene.grid.getDpi(),
+        OBR.viewport.getWidth(),
+        OBR.viewport.getHeight(),
+      ]);
+      await OBR.viewport.animateToBounds(
+        capBoundsZoom(
+          padBounds(bounds, gridDpi),
+          singleTokenZoom,
+          viewportWidth,
+          viewportHeight,
+        ),
+      );
     }
     if (highlightEnabled) {
       await waitForFocusHighlight();
       try {
-        await showHighlights(items, true);
+        await showHighlights(items, true, highlightColor);
       } catch (error) {
         console.error("Where am I? highlight setup failed.", error);
       }
@@ -215,6 +234,7 @@ export async function focusViewportOnPlayerCharacters(
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   highlightEnabled = true,
   characterId?: string,
+  highlightColor?: string,
 ): Promise<TargetActionResult> {
   const targets = await getPlayerCharacterTargets(playerId, characterId);
   return targets.ok
@@ -222,6 +242,8 @@ export async function focusViewportOnPlayerCharacters(
         targets.items,
         singleTokenZoom,
         highlightEnabled,
+        false,
+        highlightColor,
       )
     : targets;
 }
@@ -230,6 +252,7 @@ export async function focusViewportOnPartyCharacters(
   playerIds: ReadonlySet<string>,
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   highlightEnabled = true,
+  highlightColor?: string,
 ): Promise<TargetActionResult> {
   const targets = await getPartyCharacterTargets(playerIds);
   return targets.ok
@@ -237,6 +260,8 @@ export async function focusViewportOnPartyCharacters(
         targets.items,
         singleTokenZoom,
         highlightEnabled,
+        false,
+        highlightColor,
       )
     : targets;
 }

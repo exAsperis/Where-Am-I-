@@ -3,6 +3,8 @@ export const LEGACY_EXTENSION_NAMESPACE = "io.github.exasperis.where-am-i";
 
 export const PLAYER_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/player-settings`;
 export const ROOM_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/room-settings`;
+export const GM_HIGHLIGHT_SETTINGS_METADATA_KEY =
+  "com.ex-asperis.where-am-i/highlight-settings";
 export const LEGACY_PLAYER_SETTINGS_METADATA_KEY = `${LEGACY_EXTENSION_NAMESPACE}/player-settings`;
 export const LEGACY_ROOM_SETTINGS_METADATA_KEY = `${LEGACY_EXTENSION_NAMESPACE}/room-settings`;
 export const LEGACY_FOCUS_BROADCAST_CHANNEL = `${EXTENSION_NAMESPACE}/focus-command`;

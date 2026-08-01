@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculatePadding,
+  capBoundsZoom,
   createBoundsForZoom,
   filterCharacterTokens,
   filterVisibleOwnedCharacters,
@@ -190,6 +191,29 @@ describe("viewport framing", () => {
       width: 1600,
       height: 1200,
       center: { x: 100, y: 200 },
+    });
+  });
+
+  it("expands multi-item bounds so framing cannot exceed the zoom cap", () => {
+    expect(
+      capBoundsZoom(
+        {
+          min: { x: 0, y: 0 },
+          max: { x: 200, y: 100 },
+          width: 200,
+          height: 100,
+          center: { x: 100, y: 50 },
+        },
+        0.5,
+        800,
+        600,
+      ),
+    ).toEqual({
+      min: { x: -700, y: -550 },
+      max: { x: 900, y: 650 },
+      width: 1600,
+      height: 1200,
+      center: { x: 100, y: 50 },
     });
   });
 

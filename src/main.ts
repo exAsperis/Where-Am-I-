@@ -4,6 +4,7 @@ import {
   TARGET_ACTION_BROADCAST_CHANNEL,
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
+  HIGHLIGHT_COLOR,
   PLAYER_POPOVER_MAX_HEIGHT,
   PLAYER_POPOVER_MIN_HEIGHT,
   POPOVER_WIDTH,
@@ -33,6 +34,8 @@ import {
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
   setPlayerSettingsExpanded,
+  setPlayerHighlightColor,
+  setRoomHighlightColor,
 } from "./metadata";
 import {
   createTargetActionCommand,
@@ -62,6 +65,10 @@ class PopoverController {
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
   #settingsExpanded = false;
+  #playerHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
+  #playerHighlightColor = "#fa5300";
+  #roomHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
+  #roomHighlightColor = "#fa5300";
   #players: Player[] = [];
   #items: Item[] = [];
   readonly #expandedPlayerIds = new Set<string>();
@@ -105,12 +112,19 @@ class PopoverController {
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
       this.#settingsExpanded = playerSettings.settingsExpanded;
+      this.#playerHighlightColorMode = playerSettings.highlightColorMode;
+      this.#playerHighlightColor = playerSettings.highlightColor;
+      this.#roomHighlightColorMode = roomSettings.highlightColorMode;
+      this.#roomHighlightColor = roomSettings.highlightColor;
       this.#applyTheme(theme);
 
       this.#disposeCallbacks.push(
         OBR.theme.onChange((nextTheme) => this.#applyTheme(nextTheme)),
         OBR.room.onMetadataChange((metadata) => {
-          this.#globalEnabled = readRoomSettings(metadata).globalEnabled;
+          const settings = readRoomSettings(metadata);
+          this.#globalEnabled = settings.globalEnabled;
+          this.#roomHighlightColorMode = settings.highlightColorMode;
+          this.#roomHighlightColor = settings.highlightColor;
           if (!this.#globalEnabled && this.#role === "PLAYER") {
             this.#status = {
               message: "The GM has disabled Where am I? for players.",
@@ -125,6 +139,8 @@ class PopoverController {
           this.#singleTokenZoom = settings.singleTokenZoom;
           this.#highlightEnabled = settings.highlightEnabled;
           this.#settingsExpanded = settings.settingsExpanded;
+          this.#playerHighlightColorMode = settings.highlightColorMode;
+          this.#playerHighlightColor = settings.highlightColor;
           this.#render();
         }),
       );
@@ -321,6 +337,7 @@ class PopoverController {
       this.#createSettingsSection(
         this.#createZoomField(),
         this.#createHighlightToggle(),
+        this.#createHighlightColorField(),
         toggle,
       ),
     );
@@ -394,6 +411,7 @@ class PopoverController {
       this.#createSettingsSection(
         this.#createZoomField(),
         this.#createHighlightToggle(),
+        this.#createHighlightColorField(),
         globalToggle,
       ),
     );
@@ -711,6 +729,7 @@ class PopoverController {
             option.recipient,
             targets,
             includeHidden,
+            targetLabel,
           );
         },
         `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel} for ${option.label}`,
@@ -831,6 +850,52 @@ class PopoverController {
     return label;
   }
 
+  #createHighlightColorField(): HTMLElement {
+    const field = document.createElement("div");
+    field.className = "setting-field color-setting";
+    const label = document.createElement("label");
+    label.className = "setting-label";
+    const selectId = "highlight-color-mode";
+    label.htmlFor = selectId;
+    label.textContent = "Highlight color";
+    const controls = document.createElement("div");
+    controls.className = "color-controls";
+    const select = document.createElement("select");
+    select.id = selectId;
+    select.disabled = this.#busyAction !== undefined;
+    select.innerHTML =
+      '<option value="DEFAULT">Default</option><option value="CUSTOM">Custom</option>';
+    const mode =
+      this.#role === "GM"
+        ? this.#roomHighlightColorMode
+        : this.#playerHighlightColorMode;
+    const color =
+      this.#role === "GM"
+        ? this.#roomHighlightColor
+        : this.#playerHighlightColor;
+    select.value = mode;
+    select.addEventListener("change", () => {
+      void this.#updateHighlightColor(
+        select.value === "CUSTOM" ? "CUSTOM" : "DEFAULT",
+        color,
+      );
+    });
+    controls.append(select);
+    if (mode === "CUSTOM") {
+      const picker = document.createElement("input");
+      picker.type = "color";
+      picker.value = color;
+      picker.disabled = this.#busyAction !== undefined;
+      picker.setAttribute("aria-label", "Custom highlight color");
+      picker.addEventListener("change", () => {
+        void this.#updateHighlightColor("CUSTOM", picker.value);
+      });
+      controls.append(picker);
+    }
+    field.append(label, controls);
+    return field;
+  }
+
   #createHighlightToggle(): HTMLLabelElement {
     return this.#createToggle(
       "Show highlights",
@@ -920,6 +985,44 @@ class PopoverController {
     });
   }
 
+  async #updateHighlightColor(
+    mode: "DEFAULT" | "CUSTOM",
+    color: string,
+  ): Promise<void> {
+    await this.#runAction("highlight-color-setting", async () => {
+      if (this.#role === "GM") {
+        await setRoomHighlightColor(mode, color);
+        this.#roomHighlightColorMode = mode;
+        this.#roomHighlightColor = color;
+      } else {
+        await setPlayerHighlightColor(mode, color);
+        this.#playerHighlightColorMode = mode;
+        this.#playerHighlightColor = color;
+      }
+      this.#status = {
+        message:
+          mode === "CUSTOM"
+            ? "Custom highlight color saved."
+            : "Default highlight color selected.",
+        tone: "success",
+      };
+    });
+  }
+
+  #getEffectiveHighlightColor(): string {
+    if (this.#role === "GM") {
+      return this.#roomHighlightColorMode === "CUSTOM"
+        ? this.#roomHighlightColor
+        : HIGHLIGHT_COLOR;
+    }
+    if (this.#playerHighlightColorMode === "CUSTOM") {
+      return this.#playerHighlightColor;
+    }
+    return this.#roomHighlightColorMode === "CUSTOM"
+      ? this.#roomHighlightColor
+      : HIGHLIGHT_COLOR;
+  }
+
   async #updateGlobalSetting(enabled: boolean): Promise<void> {
     await this.#runAction("global-setting", async () => {
       await setGlobalEnabled(enabled);
@@ -943,6 +1046,8 @@ class PopoverController {
           OBR.player.id,
           this.#singleTokenZoom,
           this.#highlightEnabled,
+          undefined,
+          this.#getEffectiveHighlightColor(),
         ),
       );
     });
@@ -958,6 +1063,8 @@ class PopoverController {
           [characterId],
           this.#singleTokenZoom,
           this.#highlightEnabled,
+          false,
+          this.#getEffectiveHighlightColor(),
         ),
       );
     });
@@ -968,6 +1075,7 @@ class PopoverController {
     recipient: TargetRecipient | undefined,
     targets: readonly Item[],
     includeHidden: boolean,
+    targetLabel: string,
   ): Promise<void> {
     const actionId = `${action.toLowerCase()}-${recipient?.scope.toLowerCase() ?? "me"}`;
     await this.#runAction(actionId, async () => {
@@ -982,6 +1090,8 @@ class PopoverController {
           targets.map((target) => target.id),
           includeHidden,
           "ALL_ITEMS",
+          (await OBR.player.getName()).trim() || "The GM",
+          targetLabel,
         );
         await OBR.broadcast.sendMessage(
           TARGET_ACTION_BROADCAST_CHANNEL,
@@ -996,12 +1106,17 @@ class PopoverController {
       }
       const result =
         action === "HIGHLIGHT"
-          ? await highlightCharacterItems(targets, includeHidden)
+          ? await highlightCharacterItems(
+              targets,
+              includeHidden,
+              this.#getEffectiveHighlightColor(),
+            )
           : await focusViewportOnCharacterItems(
               targets,
               this.#singleTokenZoom,
               this.#highlightEnabled,
               includeHidden,
+              this.#getEffectiveHighlightColor(),
             );
       this.#setTargetActionStatus(result, action);
     });

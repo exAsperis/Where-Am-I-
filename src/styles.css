@@ -39,7 +39,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -163,6 +164,37 @@ h2 {
 }
 
 .zoom-value input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.color-controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-controls select,
+.color-controls input[type="color"] {
+  min-height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+.color-controls select {
+  padding: 4px 6px;
+}
+
+.color-controls input[type="color"] {
+  width: 38px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.color-controls select:focus-visible,
+.color-controls input[type="color"]:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
   outline-offset: 2px;
 }

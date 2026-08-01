@@ -156,6 +156,7 @@ async function animateHighlights(
 export async function showHighlights(
   items: readonly Item[],
   enabled: boolean,
+  color = HIGHLIGHT_COLOR,
 ): Promise<void> {
   await clearHighlights();
   if (!enabled || items.length === 0) {
@@ -186,9 +187,9 @@ export async function showHighlights(
         .width(geometry.initialDiameter)
         .height(geometry.initialDiameter)
         .shapeType("CIRCLE")
-        .fillColor(HIGHLIGHT_COLOR)
+        .fillColor(color)
         .fillOpacity(0)
-        .strokeColor(HIGHLIGHT_COLOR)
+        .strokeColor(color)
         .strokeOpacity(1)
         .strokeWidth(HIGHLIGHT_STROKE_WIDTH)
         .locked(true)

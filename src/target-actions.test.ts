@@ -96,6 +96,7 @@ describe("viewport focus service", () => {
     expect(highlight.showHighlights).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "one" })],
       true,
+      undefined,
     );
   });
 
@@ -158,13 +159,16 @@ describe("viewport focus service", () => {
   });
 
   it("highlights explicitly without reading or moving the viewport", async () => {
-    await expect(highlightCharacterItems([item("one")])).resolves.toEqual({
+    await expect(
+      highlightCharacterItems([item("one")], false, "#123456"),
+    ).resolves.toEqual({
       ok: true,
       itemCount: 1,
     });
     expect(highlight.showHighlights).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "one" })],
       true,
+      "#123456",
     );
     expect(sdk.scene.items.getItemBounds).not.toHaveBeenCalled();
     expect(sdk.viewport.getWidth).not.toHaveBeenCalled();
@@ -198,10 +202,10 @@ describe("viewport focus service", () => {
     });
     expect(sdk.scene.items.getItemBounds).toHaveBeenCalledWith(["one", "two"]);
     expect(sdk.viewport.animateToBounds).toHaveBeenCalledWith({
-      min: { x: -100, y: -100 },
-      max: { x: 200, y: 200 },
-      width: 300,
-      height: 300,
+      min: { x: -750, y: -550 },
+      max: { x: 850, y: 650 },
+      width: 1600,
+      height: 1200,
       center: { x: 50, y: 50 },
     });
   });

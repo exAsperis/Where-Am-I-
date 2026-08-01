@@ -6,6 +6,7 @@ import {
   createTargetActionCommand,
   isLegacyFocusCommand,
   isTargetActionCommand,
+  formatTargetActionToast,
   routeTargetAction,
   type TargetActionCommand,
 } from "./remote-actions";
@@ -88,6 +89,25 @@ describe("remote target action validation and routing", () => {
       targetCharacterIds: ["prop-1", "drawing-1"],
       targetMode: "ALL_ITEMS",
     });
+  });
+
+  it("formats succinct player and party toast messages", () => {
+    expect(
+      formatTargetActionToast({
+        ...command,
+        action: "FOCUS",
+        recipient: { scope: "PLAYER", playerId: "player-1" },
+        actorName: "Morgan",
+        targetLabel: "Crocodilian",
+      }),
+    ).toBe("Morgan focused Crocodilian for you.");
+    expect(
+      formatTargetActionToast({
+        ...command,
+        actorName: "Morgan",
+        targetLabel: "3 selected items",
+      }),
+    ).toBe("Morgan highlighted 3 selected items for the party.");
   });
 
   it("accepts party commands for every player and filters single-player commands", () => {

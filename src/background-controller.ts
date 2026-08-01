@@ -12,16 +12,19 @@ import {
   focusViewportOnPlayerCharacters,
   highlightItems,
   highlightCharacterItems,
+  type TargetActionResult,
 } from "./target-actions";
 import {
   getPlayerSettings,
   getRoomSettings,
   readRoomSettings,
+  resolveHighlightColor,
 } from "./metadata";
 import { SceneReadinessTrigger } from "./readiness";
 import {
   createLegacyFocusCommand,
   createTargetActionCommand,
+  formatTargetActionToast,
   isTargetActionCommand,
   RecentRequestIds,
   routeTargetAction,
@@ -130,7 +133,7 @@ export class BackgroundController {
         onClick: (context) => {
           void this.#sendContextAction(
             action,
-            context.items.map((item) => item.id),
+            context.items.map((item) => ({ id: item.id, name: item.name })),
           );
         },
       });
@@ -150,19 +153,28 @@ export class BackgroundController {
 
   async #sendContextAction(
     action: TargetAction,
-    targetCharacterIds: string[],
+    targets: Array<{ id: string; name: string }>,
   ): Promise<void> {
-    if (targetCharacterIds.length === 0) return;
-    const roomSettings = await getRoomSettings();
+    if (targets.length === 0) return;
+    const [roomSettings, actorName] = await Promise.all([
+      getRoomSettings(),
+      OBR.player.getName(),
+    ]);
     if (!roomSettings.globalEnabled) return;
+    const targetLabel =
+      targets.length === 1
+        ? targets[0]?.name.trim() || "an item"
+        : `${targets.length} selected items`;
     await OBR.broadcast.sendMessage(
       TARGET_ACTION_BROADCAST_CHANNEL,
       createTargetActionCommand(
         action,
         { scope: "PARTY" },
-        targetCharacterIds,
+        targets.map((target) => target.id),
         true,
         "ALL_ITEMS",
+        actorName.trim() || "The GM",
+        targetLabel,
       ),
       { destination: "REMOTE" },
     );
@@ -186,7 +198,10 @@ export class BackgroundController {
 
     this.#autoFocusInFlight = true;
     try {
-      const settings = await getPlayerSettings();
+      const [settings, roomSettings] = await Promise.all([
+        getPlayerSettings(),
+        getRoomSettings(),
+      ]);
       if (!this.#globalEnabled || !settings.autoFocusEnabled) {
         return;
       }
@@ -195,6 +210,8 @@ export class BackgroundController {
         this.#playerId,
         settings.singleTokenZoom,
         settings.highlightEnabled,
+        undefined,
+        resolveHighlightColor("PLAYER", settings, roomSettings),
       );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
@@ -235,38 +252,55 @@ export class BackgroundController {
 
       if (decision.execute) {
         const settings = await getPlayerSettings();
+        const highlightColor = resolveHighlightColor(
+          "PLAYER",
+          settings,
+          roomSettings,
+        );
         if (decision.routed.kind === "LEGACY_FOCUS") {
           await focusViewportOnPlayerCharacters(
             this.#playerId,
             settings.singleTokenZoom,
             settings.highlightEnabled,
             decision.routed.command.targetCharacterId,
+            highlightColor,
           );
         } else {
           const command = decision.routed.command;
+          let result: TargetActionResult;
           if (
             command.targetMode === "ALL_ITEMS" &&
             command.action === "HIGHLIGHT"
           ) {
-            await highlightItems(command.targetCharacterIds);
+            result = await highlightItems(
+              command.targetCharacterIds,
+              highlightColor,
+            );
           } else if (command.targetMode === "ALL_ITEMS") {
-            await focusViewportOnItems(
+            result = await focusViewportOnItems(
               command.targetCharacterIds,
               settings.singleTokenZoom,
               settings.highlightEnabled,
+              highlightColor,
             );
           } else if (command.action === "HIGHLIGHT") {
-            await highlightCharacterItems(
+            result = await highlightCharacterItems(
               command.targetCharacterIds,
               command.includeHidden,
+              highlightColor,
             );
           } else {
-            await focusViewportOnCharacterItems(
+            result = await focusViewportOnCharacterItems(
               command.targetCharacterIds,
               settings.singleTokenZoom,
               settings.highlightEnabled,
               command.includeHidden,
+              highlightColor,
             );
+          }
+          const toast = formatTargetActionToast(command);
+          if (result.ok && toast) {
+            await OBR.notification.show(toast, "INFO");
           }
         }
       }

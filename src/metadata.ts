@@ -6,6 +6,8 @@ import {
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_HIGHLIGHT_ENABLED,
   DEFAULT_SETTINGS_EXPANDED,
+  GM_HIGHLIGHT_SETTINGS_METADATA_KEY,
+  HIGHLIGHT_COLOR,
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
@@ -18,10 +20,14 @@ export interface PlayerSettings {
   singleTokenZoom: number;
   highlightEnabled: boolean;
   settingsExpanded: boolean;
+  highlightColorMode: "DEFAULT" | "CUSTOM";
+  highlightColor: string;
 }
 
 export interface RoomSettings {
   globalEnabled: boolean;
+  highlightColorMode: "DEFAULT" | "CUSTOM";
+  highlightColor: string;
 }
 
 function isSettingsObject(value: unknown): value is Record<string, unknown> {
@@ -41,6 +47,16 @@ function isValidLegacyPlayerSettings(value: unknown): boolean {
 
 function isValidLegacyRoomSettings(value: unknown): boolean {
   return isSettingsObject(value) && typeof value.globalEnabled === "boolean";
+}
+
+function readColor(value: unknown): string {
+  return typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value)
+    ? value.toLowerCase()
+    : HIGHLIGHT_COLOR;
+}
+
+function readColorMode(value: unknown): "DEFAULT" | "CUSTOM" {
+  return value === "CUSTOM" ? "CUSTOM" : "DEFAULT";
 }
 
 function readBooleanSetting(
@@ -86,6 +102,8 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
       typeof settings.settingsExpanded === "boolean"
         ? settings.settingsExpanded
         : DEFAULT_SETTINGS_EXPANDED,
+    highlightColorMode: readColorMode(settings.highlightColorMode),
+    highlightColor: readColor(settings.highlightColor),
   };
 }
 
@@ -94,6 +112,8 @@ export function readRoomSettings(metadata: Metadata): RoomSettings {
     metadata[ROOM_SETTINGS_METADATA_KEY] == null
       ? LEGACY_ROOM_SETTINGS_METADATA_KEY
       : ROOM_SETTINGS_METADATA_KEY;
+  const highlightSettings = metadata[GM_HIGHLIGHT_SETTINGS_METADATA_KEY];
+  const colors = isSettingsObject(highlightSettings) ? highlightSettings : {};
   return {
     globalEnabled: readBooleanSetting(
       metadata,
@@ -101,6 +121,8 @@ export function readRoomSettings(metadata: Metadata): RoomSettings {
       "globalEnabled",
       DEFAULT_GLOBAL_ENABLED,
     ),
+    highlightColorMode: readColorMode(colors.highlightColorMode),
+    highlightColor: readColor(colors.highlightColor),
   };
 }
 
@@ -163,6 +185,16 @@ export async function setPlayerSettingsExpanded(
   await updatePlayerSettings({ settingsExpanded });
 }
 
+export async function setPlayerHighlightColor(
+  highlightColorMode: "DEFAULT" | "CUSTOM",
+  highlightColor: string,
+): Promise<void> {
+  await updatePlayerSettings({
+    highlightColorMode,
+    highlightColor: readColor(highlightColor),
+  });
+}
+
 export async function getRoomSettings(): Promise<RoomSettings> {
   const metadata = await OBR.room.getMetadata();
   const settings = readRoomSettings(metadata);
@@ -172,7 +204,9 @@ export async function getRoomSettings(): Promise<RoomSettings> {
     (await OBR.player.getRole()) === "GM"
   ) {
     await OBR.room.setMetadata({
-      [ROOM_SETTINGS_METADATA_KEY]: settings,
+      [ROOM_SETTINGS_METADATA_KEY]: {
+        globalEnabled: settings.globalEnabled,
+      },
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: null,
     });
   }
@@ -188,4 +222,36 @@ export async function setGlobalEnabled(globalEnabled: boolean): Promise<void> {
   await OBR.room.setMetadata({
     [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled },
   });
+}
+
+export async function setRoomHighlightColor(
+  highlightColorMode: "DEFAULT" | "CUSTOM",
+  highlightColor: string,
+): Promise<void> {
+  if ((await OBR.player.getRole()) !== "GM") {
+    throw new Error("Only a GM can update the room highlight color.");
+  }
+  await OBR.room.setMetadata({
+    [GM_HIGHLIGHT_SETTINGS_METADATA_KEY]: {
+      highlightColorMode,
+      highlightColor: readColor(highlightColor),
+    },
+  });
+}
+
+export function resolveHighlightColor(
+  role: "GM" | "PLAYER",
+  playerSettings: PlayerSettings,
+  roomSettings: RoomSettings,
+): string {
+  if (role === "GM") {
+    return roomSettings.highlightColorMode === "CUSTOM"
+      ? roomSettings.highlightColor
+      : HIGHLIGHT_COLOR;
+  }
+  return playerSettings.highlightColorMode === "CUSTOM"
+    ? playerSettings.highlightColor
+    : roomSettings.highlightColorMode === "CUSTOM"
+      ? roomSettings.highlightColor
+      : HIGHLIGHT_COLOR;
 }

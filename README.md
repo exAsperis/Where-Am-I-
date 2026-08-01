@@ -23,9 +23,13 @@ Owlbear Rodeo extension bar.
   extension starts and when a new scene becomes ready. It defaults to enabled.
 - **Focus me now** frames all your visible characters together.
 - **Single-character zoom** controls how closely one selected character is
-  framed. It defaults to 50% and accepts 10–200%.
-- **Show highlights** displays a private orange circle around each
-  character being found. It defaults to enabled.
+  framed and caps the closeness of multi-character focus. It defaults to 50%
+  and accepts 10–200%.
+- **Show highlights** displays a private colored circle around each character
+  being found. It defaults to enabled.
+- **Highlight color** uses the room's GM color by default or saves a personal
+  custom color. If the GM has not chosen a custom room color, the default is
+  orange.
 - **Settings** collapses the zoom, highlight, and automatic-focus controls and
   remembers its open or closed state per player.
 - If you own several visible characters, **My characters** lets you focus one
@@ -47,6 +51,8 @@ Owlbear Rodeo player metadata.
   each token's Show/Hide and Move controls.
 - The GM item context menu can Focus or Highlight any selected items for the
   Party, regardless of item layer.
+- **Highlight color** sets the shared room default for players. Its Default
+  state is orange, and a Custom color is shared by all GMs.
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
 saved zoom and highlight settings, while remotely focused players use
@@ -67,6 +73,9 @@ explicitly sending that player a focus command.
 Highlights use temporary client-local scene items. They never become shared
 scene content, and an explicit GM Highlight does not move any viewport. A
 Focus waits half a second after viewport movement before starting its highlight.
+Multi-item focus never zooms closer than the recipient's single-character zoom
+setting. A successful remote action also shows each affected player a concise
+toast naming the GM, action, and selected target.
 
 The extension has no backend, accounts, analytics, or external data storage.
 Preferences use namespaced Owlbear Rodeo player metadata, global enablement
@@ -163,6 +172,13 @@ connection:
     each player's state persists.
 26. As GM, select Character and non-Character items and verify context-menu
     Focus → Party and Highlight → Party on separate player clients.
+27. Set a custom GM highlight color and confirm players using Default inherit
+    it; clear the shared custom state and confirm their Default resolves to
+    orange. Confirm a player's Custom selection persists independently.
+28. Focus widely spaced and tightly grouped multi-token selections and confirm
+    neither zooms closer than the recipient's single-character zoom setting.
+29. Send Player and Party actions and confirm each affected player sees one
+    concise toast naming the GM, action, and target.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

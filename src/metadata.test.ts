@@ -17,6 +17,7 @@ vi.mock("@owlbear-rodeo/sdk", () => ({ default: sdk }));
 import {
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
+  GM_HIGHLIGHT_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
   ROOM_SETTINGS_METADATA_KEY,
 } from "./constants";
@@ -28,7 +29,10 @@ import {
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerHighlightColor,
   setPlayerSettingsExpanded,
+  setRoomHighlightColor,
+  resolveHighlightColor,
 } from "./metadata";
 
 describe("metadata settings", () => {
@@ -51,6 +55,8 @@ describe("metadata settings", () => {
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
       settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).toHaveBeenCalledWith({
@@ -58,6 +64,8 @@ describe("metadata settings", () => {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
@@ -78,6 +86,8 @@ describe("metadata settings", () => {
       autoFocusEnabled: true,
       singleTokenZoom: 1,
       highlightEnabled: true,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
       settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
@@ -89,6 +99,8 @@ describe("metadata settings", () => {
       autoFocusEnabled: true,
       singleTokenZoom: 0.5,
       highlightEnabled: true,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
       settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
@@ -98,7 +110,11 @@ describe("metadata settings", () => {
     sdk.room.getMetadata.mockResolvedValue({
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: false },
     });
-    await expect(getRoomSettings()).resolves.toEqual({ globalEnabled: false });
+    await expect(getRoomSettings()).resolves.toEqual({
+      globalEnabled: false,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
+    });
     expect(sdk.room.setMetadata).toHaveBeenCalledWith({
       [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: false },
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: null,
@@ -109,7 +125,11 @@ describe("metadata settings", () => {
     sdk.room.getMetadata.mockResolvedValue({
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: false },
     });
-    await expect(getRoomSettings()).resolves.toEqual({ globalEnabled: false });
+    await expect(getRoomSettings()).resolves.toEqual({
+      globalEnabled: false,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
+    });
     expect(sdk.room.setMetadata).not.toHaveBeenCalled();
   });
 
@@ -149,6 +169,8 @@ describe("metadata settings", () => {
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
       settingsExpanded: false,
     });
     expect(
@@ -164,6 +186,8 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: false,
       },
     });
@@ -174,6 +198,8 @@ describe("metadata settings", () => {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
@@ -185,6 +211,8 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 1,
         highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
@@ -196,6 +224,8 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: true,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: false,
         targetIndicatorEnabled: true,
       },
@@ -207,9 +237,42 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
         settingsExpanded: true,
         targetIndicatorEnabled: false,
       },
     });
+  });
+
+  it("persists custom colors and resolves player defaults through the GM room color", async () => {
+    sdk.player.getMetadata.mockResolvedValue({});
+    await setPlayerHighlightColor("CUSTOM", "#12ABEF");
+    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
+      [PLAYER_SETTINGS_METADATA_KEY]: expect.objectContaining({
+        highlightColorMode: "CUSTOM",
+        highlightColor: "#12abef",
+      }),
+    });
+
+    await setRoomHighlightColor("CUSTOM", "#654321");
+    expect(sdk.room.setMetadata).toHaveBeenLastCalledWith({
+      [GM_HIGHLIGHT_SETTINGS_METADATA_KEY]: {
+        highlightColorMode: "CUSTOM",
+        highlightColor: "#654321",
+      },
+    });
+
+    const player = readPlayerSettings({});
+    const orangeRoom = readRoomSettings({});
+    const customRoom = readRoomSettings({
+      [GM_HIGHLIGHT_SETTINGS_METADATA_KEY]: {
+        highlightColorMode: "CUSTOM",
+        highlightColor: "#654321",
+      },
+    });
+    expect(resolveHighlightColor("PLAYER", player, orangeRoom)).toBe("#fa5300");
+    expect(resolveHighlightColor("PLAYER", player, customRoom)).toBe("#654321");
+    expect(resolveHighlightColor("GM", player, orangeRoom)).toBe("#fa5300");
   });
 });

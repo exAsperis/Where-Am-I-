@@ -13,6 +13,8 @@ export interface TargetActionCommand {
   targetCharacterIds: string[];
   includeHidden: boolean;
   targetMode?: "CHARACTERS" | "ALL_ITEMS";
+  actorName?: string;
+  targetLabel?: string;
   requestId: string;
   sentAt: number;
 }
@@ -76,7 +78,11 @@ export function isTargetActionCommand(
     typeof value.includeHidden === "boolean" &&
     (value.targetMode === undefined ||
       value.targetMode === "CHARACTERS" ||
-      value.targetMode === "ALL_ITEMS")
+      value.targetMode === "ALL_ITEMS") &&
+    (value.actorName === undefined ||
+      (typeof value.actorName === "string" && value.actorName.length > 0)) &&
+    (value.targetLabel === undefined ||
+      (typeof value.targetLabel === "string" && value.targetLabel.length > 0))
   );
 }
 
@@ -167,6 +173,8 @@ export function createTargetActionCommand(
   targetCharacterIds: readonly string[],
   includeHidden = false,
   targetMode: "CHARACTERS" | "ALL_ITEMS" = "CHARACTERS",
+  actorName?: string,
+  targetLabel?: string,
 ): TargetActionCommand {
   return {
     type: "TARGET_ACTION",
@@ -175,6 +183,8 @@ export function createTargetActionCommand(
     targetCharacterIds: [...targetCharacterIds],
     includeHidden,
     targetMode,
+    ...(actorName ? { actorName } : {}),
+    ...(targetLabel ? { targetLabel } : {}),
     requestId: crypto.randomUUID(),
     sentAt: Date.now(),
   };
@@ -192,4 +202,14 @@ export function createLegacyFocusCommand(
     requestId,
     sentAt: Date.now(),
   };
+}
+
+export function formatTargetActionToast(
+  command: TargetActionCommand,
+): string | undefined {
+  if (!command.actorName || !command.targetLabel) return undefined;
+  const verb = command.action === "FOCUS" ? "focused" : "highlighted";
+  const audience =
+    command.recipient.scope === "PARTY" ? "for the party" : "for you";
+  return `${command.actorName} ${verb} ${command.targetLabel} ${audience}.`;
 }
