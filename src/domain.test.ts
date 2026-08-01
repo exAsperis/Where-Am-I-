@@ -10,6 +10,11 @@ import {
   formatCharacterName,
   formatPlayerName,
   getCharacterDisplay,
+  getGmPlayerAvailabilityHint,
+  getOwnedTargetAvailability,
+  getPartyAvailabilityHint,
+  getPartyTargetAvailability,
+  getPlayerAvailabilityHint,
   groupVisibleCharactersByPlayer,
   groupPlayerConnections,
   normalizeZoomScale,
@@ -75,6 +80,68 @@ describe("character ownership", () => {
       "owned-hidden",
       "other-visible",
     ]);
+  });
+});
+
+describe("action availability", () => {
+  it("prioritizes scene and global player gates", () => {
+    expect(
+      getOwnedTargetAvailability(characters, "player-1", false, false),
+    ).toBe("NO_SCENE");
+    expect(
+      getOwnedTargetAvailability(characters, "player-1", true, false),
+    ).toBe("GLOBAL_DISABLED");
+  });
+
+  it("distinguishes absent, hidden, and visible assignments", () => {
+    expect(getOwnedTargetAvailability(characters, "missing", true)).toBe(
+      "NO_ASSIGNED_TOKENS",
+    );
+    expect(
+      getOwnedTargetAvailability(
+        characters.filter((item) => item.id !== "owned-visible"),
+        "player-1",
+        true,
+      ),
+    ).toBe("ASSIGNED_TOKENS_HIDDEN");
+    expect(getOwnedTargetAvailability(characters, "player-1", true)).toBe(
+      "AVAILABLE",
+    );
+  });
+
+  it("distinguishes party recipients and assigned targets", () => {
+    expect(getPartyTargetAvailability(characters, new Set(), true)).toBe(
+      "NO_CONNECTED_PLAYERS",
+    );
+    expect(
+      getPartyTargetAvailability(characters, new Set(["missing"]), true),
+    ).toBe("NO_ASSIGNED_TOKENS");
+    expect(
+      getPartyTargetAvailability(
+        characters.filter((item) => item.id !== "owned-visible"),
+        new Set(["player-1"]),
+        true,
+      ),
+    ).toBe("ASSIGNED_TOKENS_HIDDEN");
+    expect(
+      getPartyTargetAvailability(characters, new Set(["player-1"]), true),
+    ).toBe("AVAILABLE");
+  });
+
+  it("uses permission-aware ownership guidance", () => {
+    expect(getPlayerAvailabilityHint("NO_ASSIGNED_TOKENS", false)).toContain(
+      "enable Owner Only for Characters in Player Permissions",
+    );
+    expect(getGmPlayerAvailabilityHint("NO_ASSIGNED_TOKENS", true)).toContain(
+      "token’s Owner menu",
+    );
+    expect(getPartyAvailabilityHint("NO_CONNECTED_PLAYERS", false)).toBe(
+      "Party actions require at least one connected player.",
+    );
+    expect(getPartyAvailabilityHint("ASSIGNED_TOKENS_HIDDEN", true)).toBe(
+      "Assigned party character tokens are hidden. Show at least one to enable these actions.",
+    );
+    expect(getPlayerAvailabilityHint("AVAILABLE", false)).toBeUndefined();
   });
 });
 

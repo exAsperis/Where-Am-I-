@@ -26,6 +26,20 @@ export interface CharacterDisplay {
   characterName: string;
 }
 
+export type OwnedTargetAvailability =
+  | "AVAILABLE"
+  | "NO_SCENE"
+  | "GLOBAL_DISABLED"
+  | "NO_ASSIGNED_TOKENS"
+  | "ASSIGNED_TOKENS_HIDDEN";
+
+export type PartyTargetAvailability =
+  | "AVAILABLE"
+  | "NO_SCENE"
+  | "NO_CONNECTED_PLAYERS"
+  | "NO_ASSIGNED_TOKENS"
+  | "ASSIGNED_TOKENS_HIDDEN";
+
 function isImageToken(item: Item): item is Image {
   return item.type === "IMAGE";
 }
@@ -71,6 +85,92 @@ export function filterVisibleOwnedCharacters<T extends CharacterItem>(
   return items.filter(
     (item) => isVisibleCharacter(item) && item.createdUserId === targetPlayerId,
   );
+}
+
+export function getOwnedTargetAvailability<T extends CharacterItem>(
+  items: readonly T[],
+  playerId: string,
+  sceneReady: boolean,
+  globalEnabled = true,
+): OwnedTargetAvailability {
+  if (!sceneReady) return "NO_SCENE";
+  if (!globalEnabled) return "GLOBAL_DISABLED";
+  const assigned = items.filter(
+    (item) => isCharacter(item) && item.createdUserId === playerId,
+  );
+  if (assigned.length === 0) return "NO_ASSIGNED_TOKENS";
+  return assigned.some((item) => item.visible)
+    ? "AVAILABLE"
+    : "ASSIGNED_TOKENS_HIDDEN";
+}
+
+export function getPartyTargetAvailability<T extends CharacterItem>(
+  items: readonly T[],
+  playerIds: ReadonlySet<string>,
+  sceneReady: boolean,
+): PartyTargetAvailability {
+  if (!sceneReady) return "NO_SCENE";
+  if (playerIds.size === 0) return "NO_CONNECTED_PLAYERS";
+  const assigned = items.filter(
+    (item) => isCharacter(item) && playerIds.has(item.createdUserId),
+  );
+  if (assigned.length === 0) return "NO_ASSIGNED_TOKENS";
+  return assigned.some((item) => item.visible)
+    ? "AVAILABLE"
+    : "ASSIGNED_TOKENS_HIDDEN";
+}
+
+function ownerAssignmentInstructions(ownerOnlyEnabled: boolean): string {
+  return ownerOnlyEnabled
+    ? "Use the token’s Owner menu to assign a player."
+    : "Enable Owner Only for Characters in Player Permissions, then assign a player using the token’s Owner menu.";
+}
+
+export function getPlayerAvailabilityHint(
+  availability: OwnedTargetAvailability,
+  ownerOnlyEnabled: boolean,
+): string | undefined {
+  if (availability === "AVAILABLE") return undefined;
+  if (availability === "NO_SCENE") return "No scene is open.";
+  if (availability === "GLOBAL_DISABLED") {
+    return "The GM has disabled player focusing. Your preferences are preserved.";
+  }
+  if (availability === "ASSIGNED_TOKENS_HIDDEN") {
+    return "Your assigned character tokens are hidden. Ask the GM to show one.";
+  }
+  return `No visible character token is assigned to you. ${
+    ownerOnlyEnabled
+      ? "Ask the GM to assign you using the token’s Owner menu."
+      : "Ask the GM to enable Owner Only for Characters in Player Permissions, then assign you using the token’s Owner menu."
+  }`;
+}
+
+export function getGmPlayerAvailabilityHint(
+  availability: OwnedTargetAvailability,
+  ownerOnlyEnabled: boolean,
+): string | undefined {
+  if (availability === "AVAILABLE") return undefined;
+  if (availability === "NO_SCENE") return "No scene is open.";
+  if (availability === "ASSIGNED_TOKENS_HIDDEN") {
+    return "This player’s assigned character tokens are hidden. Show one to enable these actions.";
+  }
+  if (availability === "GLOBAL_DISABLED") return undefined;
+  return `No character token is assigned to this player. ${ownerAssignmentInstructions(ownerOnlyEnabled)}`;
+}
+
+export function getPartyAvailabilityHint(
+  availability: PartyTargetAvailability,
+  ownerOnlyEnabled: boolean,
+): string | undefined {
+  if (availability === "AVAILABLE") return undefined;
+  if (availability === "NO_SCENE") return "No scene is open.";
+  if (availability === "NO_CONNECTED_PLAYERS") {
+    return "Party actions require at least one connected player.";
+  }
+  if (availability === "ASSIGNED_TOKENS_HIDDEN") {
+    return "Assigned party character tokens are hidden. Show at least one to enable these actions.";
+  }
+  return `Party actions require visible character tokens assigned to connected players. ${ownerAssignmentInstructions(ownerOnlyEnabled)}`;
 }
 
 export function filterVisiblePartyCharacters<T extends CharacterItem>(

@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.5
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.5
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.6
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.6
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,7 +15,7 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.5)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.6)
 
 ## For players
 
@@ -42,6 +42,9 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 Only visible items on the Character layer are included. Ownership is determined
 by the player who created the token. When a player owns multiple characters,
 Where am I? frames all of them together unless a specific named token is chosen.
+GMs can assign existing tokens by enabling Owner Only for Characters in Player
+Permissions and using each token's Owner menu. Disabled actions include concise
+setup guidance when a scene, player, assignment, or visible token is missing.
 
 ## Privacy
 

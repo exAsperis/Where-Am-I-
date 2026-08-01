@@ -15,6 +15,11 @@ import {
   formatCharacterName,
   formatPlayerName,
   getCharacterDisplay,
+  getGmPlayerAvailabilityHint,
+  getOwnedTargetAvailability,
+  getPartyAvailabilityHint,
+  getPartyTargetAvailability,
+  getPlayerAvailabilityHint,
   groupPlayerConnections,
   normalizeZoomScale,
 } from "./domain";
@@ -76,6 +81,9 @@ class PopoverController {
   #busyAction: string | undefined;
   #status: Status | undefined;
   #helpId = 0;
+  #availabilityId = 0;
+  #sceneReady = false;
+  #ownerOnlyEnabled = false;
 
   constructor(root: HTMLElement) {
     this.#root = root;
@@ -112,11 +120,20 @@ class PopoverController {
     );
 
     try {
-      const [role, theme, roomSettings, playerSettings] = await Promise.all([
+      const [
+        role,
+        theme,
+        roomSettings,
+        playerSettings,
+        sceneReady,
+        permissions,
+      ] = await Promise.all([
         OBR.player.getRole(),
         OBR.theme.getTheme(),
         getRoomSettings(),
         getPlayerSettings(),
+        OBR.scene.isReady(),
+        OBR.room.getPermissions(),
       ]);
       this.#role = role;
       this.#globalEnabled = roomSettings.globalEnabled;
@@ -128,10 +145,16 @@ class PopoverController {
       this.#playerHighlightColor = playerSettings.highlightColor;
       this.#roomHighlightColorMode = roomSettings.highlightColorMode;
       this.#roomHighlightColor = roomSettings.highlightColor;
+      this.#sceneReady = sceneReady;
+      this.#ownerOnlyEnabled = permissions.includes("CHARACTER_OWNER_ONLY");
       this.#applyTheme(theme);
 
       this.#disposeCallbacks.push(
         OBR.theme.onChange((nextTheme) => this.#applyTheme(nextTheme)),
+        OBR.room.onPermissionsChange((permissions) => {
+          this.#ownerOnlyEnabled = permissions.includes("CHARACTER_OWNER_ONLY");
+          this.#render();
+        }),
         OBR.room.onMetadataChange((metadata) => {
           const settings = readRoomSettings(metadata);
           this.#globalEnabled = settings.globalEnabled;
@@ -187,6 +210,7 @@ class PopoverController {
         this.#render();
       }),
       OBR.scene.onReadyChange((ready) => {
+        this.#sceneReady = ready;
         if (ready) {
           void this.#refreshItems();
         } else {
@@ -217,6 +241,7 @@ class PopoverController {
         this.#render();
       }),
       OBR.scene.onReadyChange((ready) => {
+        this.#sceneReady = ready;
         if (ready) {
           void this.#refreshItems();
         } else {
@@ -355,18 +380,32 @@ class PopoverController {
       ),
     );
 
-    const focusButton = this.#createButton(
-      this.#busyAction === "focus-self" ? "Focusing…" : "Focus me now",
-      "primary",
-      !this.#globalEnabled || this.#busyAction !== undefined,
-      () => void this.#focusSelf(),
-    );
-    controls.append(focusButton);
-
     const ownedCharacters = filterVisibleOwnedCharacters(
       this.#items,
       OBR.player.id,
     );
+    const availability = getOwnedTargetAvailability(
+      this.#items,
+      OBR.player.id,
+      this.#sceneReady,
+      this.#globalEnabled,
+    );
+    const hintText = getPlayerAvailabilityHint(
+      availability,
+      this.#ownerOnlyEnabled,
+    );
+    const hint = hintText ? this.#createAvailabilityHint(hintText) : undefined;
+    const focusButton = this.#createButton(
+      this.#busyAction === "focus-self" ? "Focusing…" : "Focus me now",
+      "primary",
+      availability !== "AVAILABLE" || this.#busyAction !== undefined,
+      () => void this.#focusSelf(),
+      undefined,
+      hint?.id,
+    );
+    controls.append(focusButton);
+    if (hint) controls.append(hint);
+
     if (ownedCharacters.length > 1) {
       const section = document.createElement("section");
       section.className = "party";
@@ -392,20 +431,13 @@ class PopoverController {
             !this.#globalEnabled || this.#busyAction !== undefined,
             () => void this.#focusCharacter(character.id),
             `Focus ${characterLabel}`,
+            hint?.id,
           ),
         );
         list.append(row);
       }
       section.append(list);
       controls.append(section);
-    }
-
-    if (!this.#globalEnabled) {
-      const explanation = document.createElement("p");
-      explanation.className = "help";
-      explanation.textContent =
-        "The GM has disabled player focusing. Your automatic preference is preserved.";
-      controls.append(explanation);
     }
 
     return controls;
@@ -439,6 +471,7 @@ class PopoverController {
 
     if (this.#players.length === 0) {
       const empty = document.createElement("p");
+      empty.id = "connected-players-availability";
       empty.className = "empty";
       empty.textContent = "No players are currently connected.";
       section.append(empty);
@@ -469,6 +502,18 @@ class PopoverController {
     const partyActions = document.createElement("div");
     partyActions.className = "action-menu-row";
     const connectedIds = new Set(this.#players.map((player) => player.id));
+    const partyAvailability = getPartyTargetAvailability(
+      this.#items,
+      connectedIds,
+      this.#sceneReady,
+    );
+    const partyHintText = getPartyAvailabilityHint(
+      partyAvailability,
+      this.#ownerOnlyEnabled,
+    );
+    const partyHint = partyHintText
+      ? this.#createAvailabilityHint(partyHintText)
+      : undefined;
     const targets = this.#items.filter(
       (item) =>
         item.layer === "CHARACTER" &&
@@ -476,10 +521,25 @@ class PopoverController {
         connectedIds.has(item.createdUserId),
     );
     partyActions.append(
-      this.#createGmActionMenu("FOCUS", targets, false, undefined, "Party"),
-      this.#createGmActionMenu("HIGHLIGHT", targets, false, undefined, "Party"),
+      this.#createGmActionMenu(
+        "FOCUS",
+        targets,
+        false,
+        undefined,
+        "Party",
+        partyHint?.id,
+      ),
+      this.#createGmActionMenu(
+        "HIGHLIGHT",
+        targets,
+        false,
+        undefined,
+        "Party",
+        partyHint?.id,
+      ),
     );
     partyTile.append(partyIdentity, partyActions);
+    if (partyHint) partyTile.append(partyHint);
     controls.append(partyTile, section);
     controls.append(this.#renderAllCharacterTokens());
     return controls;
@@ -498,7 +558,9 @@ class PopoverController {
     if (characters.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "No character tokens are in the current scene.";
+      empty.textContent = this.#sceneReady
+        ? "No character tokens are in the current scene."
+        : "No scene is open.";
       details.append(empty);
     } else {
       const list = document.createElement("ul");
@@ -575,6 +637,16 @@ class PopoverController {
     actions.className = "row-actions";
     const playerTargets = filterVisibleOwnedCharacters(this.#items, player.id);
     const playerLabel = formatPlayerName(player.id, player.name);
+    const availability = getOwnedTargetAvailability(
+      this.#items,
+      player.id,
+      this.#sceneReady,
+    );
+    const hintText = getGmPlayerAvailabilityHint(
+      availability,
+      this.#ownerOnlyEnabled,
+    );
+    const hint = hintText ? this.#createAvailabilityHint(hintText) : undefined;
     actions.append(
       this.#createGmActionMenu(
         "FOCUS",
@@ -582,6 +654,7 @@ class PopoverController {
         false,
         player.id,
         playerLabel,
+        hint?.id,
       ),
       this.#createGmActionMenu(
         "HIGHLIGHT",
@@ -589,11 +662,13 @@ class PopoverController {
         false,
         player.id,
         playerLabel,
+        hint?.id,
       ),
     );
 
     row.append(identity, actions);
     group.append(row);
+    if (hint) group.append(hint);
 
     const characters = filterVisibleOwnedCharacters(this.#items, player.id);
     if (characters.length > 1) {
@@ -717,6 +792,7 @@ class PopoverController {
     includeHidden: boolean,
     controllingPlayerId: string | undefined,
     targetLabel: string,
+    describedBy?: string,
   ): HTMLElement {
     const container = document.createElement("div");
     container.className = "action-menu";
@@ -734,6 +810,7 @@ class PopoverController {
         }
       },
       `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel}`,
+      describedBy,
     );
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "false");
@@ -759,7 +836,9 @@ class PopoverController {
       const item = this.#createButton(
         option.label,
         "small",
-        option.recipient !== undefined && !this.#globalEnabled,
+        option.recipient !== undefined &&
+          (!this.#globalEnabled ||
+            (option.recipient.scope === "PARTY" && this.#players.length === 0)),
         () => {
           container.classList.remove("action-menu--open");
           trigger.setAttribute("aria-expanded", "false");
@@ -774,6 +853,9 @@ class PopoverController {
         `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel} ${option.label}`,
       );
       item.setAttribute("role", "menuitem");
+      if (option.recipient?.scope === "PARTY" && this.#players.length === 0) {
+        item.setAttribute("aria-describedby", "connected-players-availability");
+      }
       menu.append(item);
     }
     container.addEventListener("keydown", (event) => {
@@ -1028,12 +1110,21 @@ class PopoverController {
     return wrapper;
   }
 
+  #createAvailabilityHint(message: string): HTMLParagraphElement {
+    const hint = document.createElement("p");
+    hint.id = `availability-hint-${++this.#availabilityId}`;
+    hint.className = "availability-hint";
+    hint.textContent = message;
+    return hint;
+  }
+
   #createButton(
     text: string,
     variant: "primary" | "secondary" | "small",
     disabled: boolean,
     onClick: () => void,
     accessibleLabel?: string,
+    describedBy?: string,
   ): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
@@ -1044,6 +1135,7 @@ class PopoverController {
       button.setAttribute("aria-label", accessibleLabel);
       button.title = accessibleLabel;
     }
+    if (describedBy) button.setAttribute("aria-describedby", describedBy);
     button.addEventListener("click", onClick);
     return button;
   }

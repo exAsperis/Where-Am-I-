@@ -401,6 +401,14 @@ h2 {
   line-height: 1.35;
 }
 
+.availability-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .party {
   display: grid;
   gap: 7px;

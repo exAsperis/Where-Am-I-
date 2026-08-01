@@ -29,6 +29,12 @@ authorized using the sending Owlbear connection.
   re-check the room setting before moving the local viewport.
 - Treat `createdUserId` on visible `CHARACTER`-layer items as the sole ownership
   rule. Frame all qualifying items together.
+- Use Owlbear Rodeo's `CHARACTER_OWNER_ONLY` room permission only to tailor
+  setup guidance. Eligibility remains based on `createdUserId`, so tokens a
+  player created work even when Owner Only is disabled.
+- Disable actions before execution when their scene, target, or recipient is
+  unavailable, and show one reason-specific inline hint using Owlbear Rodeo's
+  Player Permissions and Owner-menu terminology.
 
 ## Consequences
 

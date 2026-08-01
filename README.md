@@ -66,6 +66,12 @@ by the player. Hidden items and items on other layers are excluded. When a
 player owns several visible characters, the extension can frame their combined
 bounds with extra scene-grid padding.
 
+In Owlbear Rodeo, a player owns a character token when they created it or when
+the GM assigns them through the token's **Owner** menu. To assign existing
+tokens, enable **Owner Only** for Characters in **Player Permissions**, then use
+each token's Owner menu. Unavailable actions are disabled and show an inline
+hint for missing scenes, connections, assignments, or visible tokens.
+
 Each client's viewport acts independently. A player's local action never moves
 another client's viewport, and a GM moves a player's viewport only by
 explicitly sending that player a focus command.
@@ -185,6 +191,13 @@ connection:
 31. Open every setting's question-mark help control with mouse and keyboard,
     dismiss it with Escape and outside-click, and confirm the dark-mode color
     menu uses dark option backgrounds.
+32. With Characters → Owner Only disabled, confirm unavailable player and GM
+    actions explain how to enable it and assign a token owner.
+33. Enable Owner Only, assign and unassign token owners, hide and show assigned
+    tokens, and connect and disconnect players; confirm buttons and the single
+    highest-priority inline hint update without reopening the panel.
+34. Disable remote player actions and confirm GM **for Me** actions remain
+    usable while **for Player** and **for Party** entries are disabled.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

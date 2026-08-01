@@ -1,17 +1,17 @@
 {
   "name": "Where am I?",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "manifest_version": 1,
   "author": "ex Asperis",
   "description": "Focus and highlight Character-layer tokens in Owlbear Rodeo.",
   "homepage_url": "https://github.com/exAsperis/Where-Am-I-",
-  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.5",
+  "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.6",
   "action": {
     "title": "Where am I?",
-    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.5",
-    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.7.5",
+    "icon": "https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.6",
+    "popover": "https://exasperis.github.io/Where-Am-I-/main.html?v=0.7.6",
     "height": 860,
     "width": 360
   },
-  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.7.5"
+  "background_url": "https://exasperis.github.io/Where-Am-I-/background.html?v=0.7.6"
 }
