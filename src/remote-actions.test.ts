@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   RecentRequestIds,
+  createLegacyFocusCommand,
   createTargetActionCommand,
   isLegacyFocusCommand,
   isTargetActionCommand,
@@ -73,6 +74,22 @@ describe("remote target action validation and routing", () => {
     });
   });
 
+  it("creates and validates all-item party commands for context-menu actions", () => {
+    const contextCommand = createTargetActionCommand(
+      "HIGHLIGHT",
+      { scope: "PARTY" },
+      ["prop-1", "drawing-1"],
+      true,
+      "ALL_ITEMS",
+    );
+    expect(isTargetActionCommand(contextCommand)).toBe(true);
+    expect(contextCommand).toMatchObject({
+      recipient: { scope: "PARTY" },
+      targetCharacterIds: ["prop-1", "drawing-1"],
+      targetMode: "ALL_ITEMS",
+    });
+  });
+
   it("accepts party commands for every player and filters single-player commands", () => {
     expect(route().execute).toBe(true);
     expect(
@@ -96,6 +113,17 @@ describe("remote target action validation and routing", () => {
     expect(route({ data: legacy })).toMatchObject({
       execute: true,
       routed: { kind: "LEGACY_FOCUS" },
+    });
+  });
+
+  it("creates a legacy command with the new command request ID", () => {
+    expect(
+      createLegacyFocusCommand("player-1", "shared-request", "character-1"),
+    ).toMatchObject({
+      type: "FOCUS_OWNED_CHARACTERS",
+      targetPlayerId: "player-1",
+      targetCharacterId: "character-1",
+      requestId: "shared-request",
     });
   });
 

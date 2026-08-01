@@ -28,6 +28,7 @@ import {
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerSettingsExpanded,
 } from "./metadata";
 
 describe("metadata settings", () => {
@@ -50,12 +51,14 @@ describe("metadata settings", () => {
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).toHaveBeenCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
       [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
@@ -75,6 +78,7 @@ describe("metadata settings", () => {
       autoFocusEnabled: true,
       singleTokenZoom: 1,
       highlightEnabled: true,
+      settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
 
@@ -85,6 +89,7 @@ describe("metadata settings", () => {
       autoFocusEnabled: true,
       singleTokenZoom: 0.5,
       highlightEnabled: true,
+      settingsExpanded: false,
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
   });
@@ -112,6 +117,7 @@ describe("metadata settings", () => {
     expect(readPlayerSettings({}).autoFocusEnabled).toBe(true);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
     expect(readPlayerSettings({}).highlightEnabled).toBe(true);
+    expect(readPlayerSettings({}).settingsExpanded).toBe(false);
     expect(
       readPlayerSettings({
         [PLAYER_SETTINGS_METADATA_KEY]: { autoFocusEnabled: "yes" },
@@ -143,6 +149,7 @@ describe("metadata settings", () => {
       autoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      settingsExpanded: false,
     });
     expect(
       readRoomSettings({
@@ -157,6 +164,7 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        settingsExpanded: false,
       },
     });
 
@@ -166,6 +174,7 @@ describe("metadata settings", () => {
         autoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
     });
@@ -176,6 +185,7 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 1,
         highlightEnabled: false,
+        settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
     });
@@ -186,7 +196,19 @@ describe("metadata settings", () => {
         autoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: true,
+        settingsExpanded: false,
         targetIndicatorEnabled: true,
+      },
+    });
+
+    await setPlayerSettingsExpanded(true);
+    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
+      [PLAYER_SETTINGS_METADATA_KEY]: {
+        autoFocusEnabled: true,
+        singleTokenZoom: 0.75,
+        highlightEnabled: false,
+        settingsExpanded: true,
+        targetIndicatorEnabled: false,
       },
     });
   });

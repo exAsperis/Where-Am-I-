@@ -26,6 +26,8 @@ Owlbear Rodeo extension bar.
   framed. It defaults to 50% and accepts 10–200%.
 - **Show highlights** displays a private orange circle around each
   character being found. It defaults to enabled.
+- **Settings** collapses the zoom, highlight, and automatic-focus controls and
+  remembers its open or closed state per player.
 - If you own several visible characters, **My characters** lets you focus one
   named token at a time.
 
@@ -43,6 +45,8 @@ Owlbear Rodeo player metadata.
   **Party**.
 - **All character tokens** provides the same Me/Party actions while retaining
   each token's Show/Hide and Move controls.
+- The GM item context menu can Focus or Highlight any selected items for the
+  Party, regardless of item layer.
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
 saved zoom and highlight settings, while remotely focused players use
@@ -61,7 +65,8 @@ another client's viewport, and a GM moves a player's viewport only by
 explicitly sending that player a focus command.
 
 Highlights use temporary client-local scene items. They never become shared
-scene content, and an explicit GM Highlight does not move any viewport.
+scene content, and an explicit GM Highlight does not move any viewport. A
+Focus waits half a second after viewport movement before starting its highlight.
 
 The extension has no backend, accounts, analytics, or external data storage.
 Preferences use namespaced Owlbear Rodeo player metadata, global enablement
@@ -154,6 +159,10 @@ connection:
     highlights are removed.
 24. Confirm the translucent blurred panel grows for four players (including
     two expanded two-character players) and scrolls for larger parties.
+25. Collapse and expand Settings as both roles, reopen the panel, and confirm
+    each player's state persists.
+26. As GM, select Character and non-Character items and verify context-menu
+    Focus → Party and Highlight → Party on separate player clients.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

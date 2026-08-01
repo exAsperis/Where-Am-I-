@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.0
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.6.0
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.2
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.6.2
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,7 +15,7 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.0)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.6.2)
 
 ## For players
 
@@ -24,6 +24,7 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 - Pick one named character from your personal list when you own several.
 - Set and save your preferred single-character zoom.
 - Optionally show a private orange highlight when characters are focused.
+- Collapse Settings and retain its state for the next time the panel opens.
 
 ## For GMs
 
@@ -33,6 +34,7 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 - Focus or highlight the whole party locally or for every player.
 - Expand all scene character tokens to focus, highlight, show or hide, and move
   them.
+- Focus or highlight any context-menu selection for the whole party.
 - Keep personal zoom and highlight preferences.
 
 Only visible items on the Character layer are included. Ownership is determined

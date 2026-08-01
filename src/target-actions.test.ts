@@ -1,5 +1,5 @@
 import type { Item } from "@owlbear-rodeo/sdk";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sdk = vi.hoisted(() => ({
   scene: {
@@ -27,8 +27,10 @@ vi.mock("./highlight", () => highlight);
 
 import {
   focusViewportOnCharacterItems,
+  focusViewportOnItems,
   focusViewportOnPlayerCharacters,
   highlightCharacterItems,
+  highlightItems,
 } from "./target-actions";
 
 function item(id: string, overrides: Partial<Item> = {}): Item {
@@ -67,6 +69,16 @@ describe("viewport focus service", () => {
     sdk.viewport.getWidth.mockResolvedValue(800);
     sdk.viewport.getHeight.mockResolvedValue(600);
     highlight.showHighlights.mockResolvedValue(undefined);
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((
+      callback: TimerHandler,
+    ) => {
+      if (typeof callback === "function") callback();
+      return 0;
+    }) as typeof setTimeout);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("defaults to 50% zoom for a single character", async () => {
@@ -84,6 +96,20 @@ describe("viewport focus service", () => {
     expect(highlight.showHighlights).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "one" })],
       true,
+    );
+  });
+
+  it("waits 500ms after viewport movement before starting the highlight", async () => {
+    await focusViewportOnCharacterItems([item("one")]);
+
+    expect(globalThis.setTimeout).toHaveBeenCalledWith(
+      expect.any(Function),
+      500,
+    );
+    expect(
+      sdk.viewport.animateToBounds.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      highlight.showHighlights.mock.invocationCallOrder[0] ?? Infinity,
     );
   });
 
@@ -143,6 +169,19 @@ describe("viewport focus service", () => {
     expect(sdk.scene.items.getItemBounds).not.toHaveBeenCalled();
     expect(sdk.viewport.getWidth).not.toHaveBeenCalled();
     expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
+  });
+
+  it("focuses and highlights non-character items for GM context actions", async () => {
+    const prop = item("prop", { layer: "PROP" });
+    await expect(highlightItems([prop])).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+    await expect(focusViewportOnItems([prop], 0.5, false)).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+    expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
   });
 
   it("frames all visible characters owned by the target player", async () => {

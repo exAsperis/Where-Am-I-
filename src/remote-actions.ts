@@ -12,6 +12,7 @@ export interface TargetActionCommand {
   recipient: TargetRecipient;
   targetCharacterIds: string[];
   includeHidden: boolean;
+  targetMode?: "CHARACTERS" | "ALL_ITEMS";
   requestId: string;
   sentAt: number;
 }
@@ -72,7 +73,10 @@ export function isTargetActionCommand(
     value.targetCharacterIds.every(
       (id) => typeof id === "string" && id.length > 0,
     ) &&
-    typeof value.includeHidden === "boolean"
+    typeof value.includeHidden === "boolean" &&
+    (value.targetMode === undefined ||
+      value.targetMode === "CHARACTERS" ||
+      value.targetMode === "ALL_ITEMS")
   );
 }
 
@@ -162,6 +166,7 @@ export function createTargetActionCommand(
   recipient: TargetRecipient,
   targetCharacterIds: readonly string[],
   includeHidden = false,
+  targetMode: "CHARACTERS" | "ALL_ITEMS" = "CHARACTERS",
 ): TargetActionCommand {
   return {
     type: "TARGET_ACTION",
@@ -169,7 +174,22 @@ export function createTargetActionCommand(
     recipient,
     targetCharacterIds: [...targetCharacterIds],
     includeHidden,
+    targetMode,
     requestId: crypto.randomUUID(),
+    sentAt: Date.now(),
+  };
+}
+
+export function createLegacyFocusCommand(
+  targetPlayerId: string,
+  requestId: string,
+  targetCharacterId?: string,
+): LegacyFocusCommand {
+  return {
+    type: "FOCUS_OWNED_CHARACTERS",
+    targetPlayerId,
+    ...(targetCharacterId ? { targetCharacterId } : {}),
+    requestId,
     sentAt: Date.now(),
   };
 }

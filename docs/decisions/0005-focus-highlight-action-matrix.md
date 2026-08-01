@@ -17,9 +17,15 @@ selectable without crowding each player and character tile.
 - Send explicit token IDs in authenticated GM commands. Receivers re-fetch the
   IDs and validate Character layer and visibility before acting.
 - Explicit Highlight always displays. Highlights accompanying automatic or
-  requested Focus respect the viewing client's saved preference.
-- Keep accepting legacy owned-character focus commands and dual-write the
-  legacy highlight-preference field during the compatibility transition.
+  requested Focus respect the viewing client's saved preference and start 500
+  milliseconds after viewport movement completes.
+- Register GM-only background context-menu actions for Focus → Party and
+  Highlight → Party. Context targets preserve exact selected item IDs and may
+  include any item layer.
+- Use a dedicated target-action channel while continuing to receive the legacy
+  focus channel. Send a same-request-ID legacy fallback for single-player Focus
+  so mixed-version clients execute it exactly once. Dual-write the legacy
+  highlight-preference field during the compatibility transition.
 
 ## Consequences
 

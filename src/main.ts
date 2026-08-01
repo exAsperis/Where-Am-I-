@@ -1,6 +1,7 @@
 import OBR, { type Item, type Player, type Theme } from "@owlbear-rodeo/sdk";
 
 import {
+  LEGACY_FOCUS_BROADCAST_CHANNEL,
   TARGET_ACTION_BROADCAST_CHANNEL,
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
@@ -32,8 +33,10 @@ import {
   setPlayerAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerSettingsExpanded,
 } from "./metadata";
 import {
+  createLegacyFocusCommand,
   createTargetActionCommand,
   type TargetAction,
   type TargetRecipient,
@@ -60,6 +63,7 @@ class PopoverController {
   #autoFocusEnabled = true;
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
+  #settingsExpanded = false;
   #players: Player[] = [];
   #items: Item[] = [];
   readonly #expandedPlayerIds = new Set<string>();
@@ -102,6 +106,7 @@ class PopoverController {
       this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
+      this.#settingsExpanded = playerSettings.settingsExpanded;
       this.#applyTheme(theme);
 
       this.#disposeCallbacks.push(
@@ -121,6 +126,7 @@ class PopoverController {
           this.#autoFocusEnabled = settings.autoFocusEnabled;
           this.#singleTokenZoom = settings.singleTokenZoom;
           this.#highlightEnabled = settings.highlightEnabled;
+          this.#settingsExpanded = settings.settingsExpanded;
           this.#render();
         }),
       );
@@ -261,12 +267,14 @@ class PopoverController {
 
     const header = document.createElement("header");
     header.className = "header";
-    header.innerHTML = `
-      <div>
-        <p class="eyebrow">Viewport helper</p>
-        <h1 id="app-title">Where am I?</h1>
-      </div>
-    `;
+    const icon = document.createElement("img");
+    icon.className = "header-icon";
+    icon.src = `${import.meta.env.BASE_URL}icon.svg`;
+    icon.alt = "";
+    const title = document.createElement("h1");
+    title.id = "app-title";
+    title.textContent = "Where am I?";
+    header.append(icon, title);
     app.append(header);
 
     if (this.#role === "GM") {
@@ -286,6 +294,11 @@ class PopoverController {
         : "Only your local viewport moves when you focus yourself.");
     app.append(status);
 
+    const version = document.createElement("p");
+    version.className = "version";
+    version.textContent = `Version ${RELEASE_VERSION}`;
+    app.append(version);
+
     this.#root.append(app);
     const resize =
       this.#role === "GM"
@@ -300,16 +313,19 @@ class PopoverController {
     const controls = document.createElement("div");
     controls.className = "controls";
 
-    controls.append(this.#createZoomField());
-    controls.append(this.#createHighlightToggle());
-
     const toggle = this.#createToggle(
       "Automatically focus my character",
       this.#autoFocusEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updatePlayerPreference(enabled),
     );
-    controls.append(toggle);
+    controls.append(
+      this.#createSettingsSection(
+        this.#createZoomField(),
+        this.#createHighlightToggle(),
+        toggle,
+      ),
+    );
 
     const focusButton = this.#createButton(
       this.#busyAction === "focus-self" ? "Focusing…" : "Focus me now",
@@ -370,14 +386,17 @@ class PopoverController {
   #renderGmControls(): HTMLElement {
     const controls = document.createElement("div");
     controls.className = "controls";
-    controls.append(this.#createZoomField());
-    controls.append(this.#createHighlightToggle());
+    const globalToggle = this.#createToggle(
+      "Enable Where am I? for players",
+      this.#globalEnabled,
+      this.#busyAction !== undefined,
+      (enabled) => void this.#updateGlobalSetting(enabled),
+    );
     controls.append(
-      this.#createToggle(
-        "Enable Where am I? for players",
-        this.#globalEnabled,
-        this.#busyAction !== undefined,
-        (enabled) => void this.#updateGlobalSetting(enabled),
+      this.#createSettingsSection(
+        this.#createZoomField(),
+        this.#createHighlightToggle(),
+        globalToggle,
       ),
     );
 
@@ -755,6 +774,38 @@ class PopoverController {
     return label;
   }
 
+  #createSettingsSection(...settings: HTMLElement[]): HTMLDetailsElement {
+    const details = document.createElement("details");
+    details.className = "settings-disclosure";
+    details.open = this.#settingsExpanded;
+    const summary = document.createElement("summary");
+    summary.textContent = "Settings";
+    const content = document.createElement("div");
+    content.className = "settings-content";
+    content.append(...settings);
+    details.append(summary, content);
+    details.addEventListener("toggle", () => {
+      if (details.open === this.#settingsExpanded) return;
+      this.#settingsExpanded = details.open;
+      void setPlayerSettingsExpanded(details.open).catch((error: unknown) => {
+        console.error("Where am I? could not save Settings state.", error);
+        this.#status = {
+          message: "The Settings section state could not be saved.",
+          tone: "error",
+        };
+        this.#render();
+      });
+      const resize =
+        this.#role === "GM"
+          ? this.#resizeGmPopover()
+          : this.#resizePlayerPopover();
+      void resize.catch((error: unknown) => {
+        console.error("Where am I? could not resize the popover.", error);
+      });
+    });
+    return details;
+  }
+
   #createZoomField(): HTMLLabelElement {
     const label = document.createElement("label");
     label.className = "setting-field";
@@ -929,16 +980,28 @@ class PopoverController {
         if ((await OBR.player.getRole()) !== "GM") {
           throw new Error("Only a GM can send a remote target action.");
         }
+        const command = createTargetActionCommand(
+          action,
+          recipient,
+          targets.map((target) => target.id),
+          includeHidden,
+        );
         await OBR.broadcast.sendMessage(
           TARGET_ACTION_BROADCAST_CHANNEL,
-          createTargetActionCommand(
-            action,
-            recipient,
-            targets.map((target) => target.id),
-            includeHidden,
-          ),
+          command,
           { destination: "REMOTE" },
         );
+        if (action === "FOCUS" && recipient.scope === "PLAYER") {
+          await OBR.broadcast.sendMessage(
+            LEGACY_FOCUS_BROADCAST_CHANNEL,
+            createLegacyFocusCommand(
+              recipient.playerId,
+              command.requestId,
+              targets.length === 1 ? targets[0]?.id : undefined,
+            ),
+            { destination: "REMOTE" },
+          );
+        }
         this.#status = {
           message: `${action === "FOCUS" ? "Focus" : "Highlight"} sent to ${recipient.scope === "PARTY" ? "the party" : "the player"}.`,
           tone: "success",

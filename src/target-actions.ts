@@ -1,6 +1,9 @@
 import OBR, { type Item } from "@owlbear-rodeo/sdk";
 
-import { DEFAULT_SINGLE_TOKEN_ZOOM } from "./constants";
+import {
+  DEFAULT_SINGLE_TOKEN_ZOOM,
+  FOCUS_HIGHLIGHT_DELAY_MS,
+} from "./constants";
 import {
   createBoundsForZoom,
   filterVisibleOwnedCharacters,
@@ -48,6 +51,39 @@ async function resolveCharacterItems(
   return items.filter(includeHidden ? isCharacter : isVisibleCharacter);
 }
 
+async function resolveItems(
+  itemsOrIds: readonly Item[] | readonly string[],
+): Promise<Item[]> {
+  return itemsOrIds.length === 0
+    ? []
+    : typeof itemsOrIds[0] === "string"
+      ? OBR.scene.items.getItems([...itemsOrIds] as string[])
+      : [...(itemsOrIds as readonly Item[])];
+}
+
+function waitForFocusHighlight(): Promise<void> {
+  return new Promise((resolve) => {
+    globalThis.setTimeout(resolve, FOCUS_HIGHLIGHT_DELAY_MS);
+  });
+}
+
+export async function highlightItems(
+  itemsOrIds: readonly Item[] | readonly string[],
+): Promise<TargetActionResult> {
+  try {
+    if (!(await OBR.scene.isReady())) {
+      return { ok: false, reason: "SCENE_UNAVAILABLE" };
+    }
+    const items = await resolveItems(itemsOrIds);
+    if (items.length === 0) return { ok: false, reason: "NOT_FOUND" };
+    await showHighlights(items, true);
+    return { ok: true, itemCount: items.length };
+  } catch (error) {
+    console.error("Where am I? failed to highlight items.", error);
+    return { ok: false, reason: "SDK_ERROR", error };
+  }
+}
+
 export async function highlightCharacterItems(
   itemsOrIds: readonly Item[] | readonly string[],
   includeHidden = false,
@@ -74,20 +110,52 @@ export async function focusViewportOnCharacterItems(
   highlightEnabled = true,
   includeHidden = false,
 ): Promise<TargetActionResult> {
+  return focusViewportOnItemsInternal(
+    itemsOrIds,
+    singleTokenZoom,
+    highlightEnabled,
+    includeHidden,
+  );
+}
+
+export async function focusViewportOnItems(
+  itemsOrIds: readonly Item[] | readonly string[],
+  singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
+  highlightEnabled = true,
+): Promise<TargetActionResult> {
+  return focusViewportOnItemsInternal(
+    itemsOrIds,
+    singleTokenZoom,
+    highlightEnabled,
+    undefined,
+  );
+}
+
+async function focusViewportOnItemsInternal(
+  itemsOrIds: readonly Item[] | readonly string[],
+  singleTokenZoom: number,
+  highlightEnabled: boolean,
+  includeHidden: boolean | undefined,
+): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
       return { ok: false, reason: "SCENE_UNAVAILABLE" };
     }
-    const items = await resolveCharacterItems(itemsOrIds, includeHidden);
+    const items =
+      includeHidden === undefined
+        ? await resolveItems(itemsOrIds)
+        : await resolveCharacterItems(itemsOrIds, includeHidden);
     if (items.length === 0) {
       return { ok: false, reason: "NOT_FOUND" };
     }
     const ids = items.map((item) => item.id);
     const bounds = await OBR.scene.items.getItemBounds(ids);
-    try {
-      await showHighlights(items, highlightEnabled);
-    } catch (error) {
-      console.error("Where am I? highlight setup failed.", error);
+    if (!highlightEnabled) {
+      try {
+        await showHighlights(items, false);
+      } catch (error) {
+        console.error("Where am I? highlight cleanup failed.", error);
+      }
     }
     if (ids.length === 1) {
       const [width, height] = await Promise.all([
@@ -100,6 +168,14 @@ export async function focusViewportOnCharacterItems(
     } else {
       const gridDpi = await OBR.scene.grid.getDpi();
       await OBR.viewport.animateToBounds(padBounds(bounds, gridDpi));
+    }
+    if (highlightEnabled) {
+      await waitForFocusHighlight();
+      try {
+        await showHighlights(items, true);
+      } catch (error) {
+        console.error("Where am I? highlight setup failed.", error);
+      }
     }
     return { ok: true, itemCount: ids.length };
   } catch (error) {

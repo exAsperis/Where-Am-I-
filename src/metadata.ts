@@ -5,6 +5,7 @@ import {
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_HIGHLIGHT_ENABLED,
+  DEFAULT_SETTINGS_EXPANDED,
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
@@ -16,6 +17,7 @@ export interface PlayerSettings {
   autoFocusEnabled: boolean;
   singleTokenZoom: number;
   highlightEnabled: boolean;
+  settingsExpanded: boolean;
 }
 
 export interface RoomSettings {
@@ -80,6 +82,10 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
         : typeof settings.targetIndicatorEnabled === "boolean"
           ? settings.targetIndicatorEnabled
           : DEFAULT_HIGHLIGHT_ENABLED,
+    settingsExpanded:
+      typeof settings.settingsExpanded === "boolean"
+        ? settings.settingsExpanded
+        : DEFAULT_SETTINGS_EXPANDED,
   };
 }
 
@@ -149,6 +155,12 @@ export async function setPlayerHighlightEnabled(
   highlightEnabled: boolean,
 ): Promise<void> {
   await updatePlayerSettings({ highlightEnabled });
+}
+
+export async function setPlayerSettingsExpanded(
+  settingsExpanded: boolean,
+): Promise<void> {
+  await updatePlayerSettings({ settingsExpanded });
 }
 
 export async function getRoomSettings(): Promise<RoomSettings> {

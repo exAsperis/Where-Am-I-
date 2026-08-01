@@ -1,9 +1,16 @@
 import OBR from "@owlbear-rodeo/sdk";
 
-import { TARGET_ACTION_BROADCAST_CHANNEL } from "./constants";
 import {
+  LEGACY_FOCUS_BROADCAST_CHANNEL,
+  TARGET_ACTION_BROADCAST_CHANNEL,
+  FOCUS_PARTY_CONTEXT_MENU_ID,
+  HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
+} from "./constants";
+import {
+  focusViewportOnItems,
   focusViewportOnCharacterItems,
   focusViewportOnPlayerCharacters,
+  highlightItems,
   highlightCharacterItems,
 } from "./target-actions";
 import {
@@ -12,7 +19,12 @@ import {
   readRoomSettings,
 } from "./metadata";
 import { SceneReadinessTrigger } from "./readiness";
-import { RecentRequestIds, routeTargetAction } from "./remote-actions";
+import {
+  createTargetActionCommand,
+  RecentRequestIds,
+  routeTargetAction,
+  type TargetAction,
+} from "./remote-actions";
 
 export class BackgroundController {
   readonly #disposeCallbacks: Array<() => void> = [];
@@ -26,7 +38,8 @@ export class BackgroundController {
 
   async start(): Promise<void> {
     const role = await OBR.player.getRole();
-    if (role !== "PLAYER") {
+    if (role === "GM") {
+      await this.#startGmContextMenus();
       return;
     }
 
@@ -56,6 +69,12 @@ export class BackgroundController {
           void this.#handleRemoteCommand(data, connectionId);
         },
       ),
+      OBR.broadcast.onMessage(
+        LEGACY_FOCUS_BROADCAST_CHANNEL,
+        ({ data, connectionId }) => {
+          void this.#handleRemoteCommand(data, connectionId);
+        },
+      ),
     );
 
     try {
@@ -69,6 +88,57 @@ export class BackgroundController {
         error,
       );
     }
+  }
+
+  async #startGmContextMenus(): Promise<void> {
+    const icon = `${import.meta.env.BASE_URL}icon.svg`;
+    const createMenu = async (
+      id: string,
+      label: string,
+      action: TargetAction,
+    ): Promise<void> => {
+      await OBR.contextMenu.create({
+        id,
+        icons: [{ icon, label, filter: { roles: ["GM"], min: 1 } }],
+        onClick: (context) => {
+          void this.#sendContextAction(
+            action,
+            context.items.map((item) => item.id),
+          );
+        },
+      });
+      this.#disposeCallbacks.push(() => {
+        void OBR.contextMenu.remove(id);
+      });
+    };
+    await Promise.all([
+      createMenu(FOCUS_PARTY_CONTEXT_MENU_ID, "Focus → Party", "FOCUS"),
+      createMenu(
+        HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
+        "Highlight → Party",
+        "HIGHLIGHT",
+      ),
+    ]);
+  }
+
+  async #sendContextAction(
+    action: TargetAction,
+    targetCharacterIds: string[],
+  ): Promise<void> {
+    if (targetCharacterIds.length === 0) return;
+    const roomSettings = await getRoomSettings();
+    if (!roomSettings.globalEnabled) return;
+    await OBR.broadcast.sendMessage(
+      TARGET_ACTION_BROADCAST_CHANNEL,
+      createTargetActionCommand(
+        action,
+        { scope: "PARTY" },
+        targetCharacterIds,
+        true,
+        "ALL_ITEMS",
+      ),
+      { destination: "REMOTE" },
+    );
   }
 
   dispose(): void {
@@ -147,7 +217,18 @@ export class BackgroundController {
           );
         } else {
           const command = decision.routed.command;
-          if (command.action === "HIGHLIGHT") {
+          if (
+            command.targetMode === "ALL_ITEMS" &&
+            command.action === "HIGHLIGHT"
+          ) {
+            await highlightItems(command.targetCharacterIds);
+          } else if (command.targetMode === "ALL_ITEMS") {
+            await focusViewportOnItems(
+              command.targetCharacterIds,
+              settings.singleTokenZoom,
+              settings.highlightEnabled,
+            );
+          } else if (command.action === "HIGHLIGHT") {
             await highlightCharacterItems(
               command.targetCharacterIds,
               command.includeHidden,
