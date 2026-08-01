@@ -2,6 +2,7 @@ import type { Item } from "@owlbear-rodeo/sdk";
 import { describe, expect, it } from "vitest";
 
 import {
+  calculateCenterAnchoredViewportPosition,
   calculateHighlightFitScale,
   calculatePadding,
   capBoundsZoom,
@@ -346,6 +347,91 @@ describe("viewport framing", () => {
     expect(
       calculateHighlightFitScale(bounds, { x: 0, y: 0 }, 1, 600, 1_600),
     ).toBeCloseTo(0.3);
+  });
+
+  it.each([
+    { min: { x: 200, y: 400 }, max: { x: 2_000, y: 1_600 } },
+    { min: { x: 0, y: 400 }, max: { x: 1_800, y: 1_600 } },
+    { min: { x: 200, y: 400 }, max: { x: 1_800, y: 1_750 } },
+    { min: { x: 200, y: 250 }, max: { x: 1_800, y: 1_600 } },
+    { min: { x: 0, y: 250 }, max: { x: 2_000, y: 1_750 } },
+  ])(
+    "keeps the visible center fixed while fitting targets beyond every edge",
+    (edges) => {
+      const viewportCenter = { x: 1_000, y: 1_000 };
+      const currentPosition = { x: -100, y: -200 };
+      const currentScale = 0.5;
+      const width = 800;
+      const height = 600;
+      const targetScale = calculateHighlightFitScale(
+        {
+          ...edges,
+          width: edges.max.x - edges.min.x,
+          height: edges.max.y - edges.min.y,
+          center: {
+            x: (edges.min.x + edges.max.x) / 2,
+            y: (edges.min.y + edges.max.y) / 2,
+          },
+        },
+        viewportCenter,
+        currentScale,
+        width,
+        height,
+      );
+      expect(targetScale).toBeDefined();
+
+      const targetPosition = calculateCenterAnchoredViewportPosition(
+        currentPosition,
+        currentScale,
+        targetScale!,
+        width,
+        height,
+      );
+      expect(targetPosition).toBeDefined();
+
+      const transformedCenter = {
+        x: viewportCenter.x * targetScale! + targetPosition!.x,
+        y: viewportCenter.y * targetScale! + targetPosition!.y,
+      };
+      expect(transformedCenter.x).toBeCloseTo(width / 2);
+      expect(transformedCenter.y).toBeCloseTo(height / 2);
+      expect(
+        edges.min.x * targetScale! + targetPosition!.x,
+      ).toBeGreaterThanOrEqual(-Number.EPSILON);
+      expect(
+        edges.max.x * targetScale! + targetPosition!.x,
+      ).toBeLessThanOrEqual(width + Number.EPSILON);
+      expect(
+        edges.min.y * targetScale! + targetPosition!.y,
+      ).toBeGreaterThanOrEqual(-Number.EPSILON);
+      expect(
+        edges.max.y * targetScale! + targetPosition!.y,
+      ).toBeLessThanOrEqual(height + Number.EPSILON);
+    },
+  );
+
+  it("rejects malformed center-anchored viewport transforms", () => {
+    expect(
+      calculateCenterAnchoredViewportPosition({ x: 0, y: 0 }, 0, 0.5, 800, 600),
+    ).toBeUndefined();
+    expect(
+      calculateCenterAnchoredViewportPosition(
+        { x: 0, y: Number.NaN },
+        0.5,
+        0.25,
+        800,
+        600,
+      ),
+    ).toBeUndefined();
+    expect(
+      calculateCenterAnchoredViewportPosition(
+        { x: 0, y: 0 },
+        0.5,
+        0.75,
+        800,
+        600,
+      ),
+    ).toBeUndefined();
   });
 
   it("rejects malformed Highlight viewport inputs", () => {

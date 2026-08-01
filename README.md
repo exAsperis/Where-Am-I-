@@ -77,10 +77,11 @@ another client's viewport, and a GM moves a player's viewport only by
 explicitly sending that player a focus command.
 
 Highlights use temporary client-local scene items. They never become shared
-scene content. An explicit Highlight keeps the recipient's viewport position
-unchanged and zooms out only when needed to fit every highlighted item; it never
-zooms in. The rings begin after any required zoom completes. A Focus waits half
-a second after viewport movement before starting its highlight.
+scene content. An explicit Highlight keeps the scene point at the center of the
+recipient's viewport stationary and zooms out only when needed to fit every
+highlighted item; it never zooms in or pans toward the target. The rings begin
+after any required zoom completes. A Focus waits half a second after viewport
+movement before starting its highlight.
 Multi-item focus never zooms closer than the recipient's maximum zoom
 setting. A successful remote action also shows each affected player a concise
 toast naming the GM, action, and selected target.
@@ -201,8 +202,11 @@ connection:
 34. Disable remote player actions and confirm GM **for Me** actions remain
     usable while **for Player** and **for Party** entries are disabled.
 35. Trigger Highlight with targets inside, outside, and spanning opposite
-    viewport edges. Confirm it never zooms in or changes Position X/Y, zooms out
-    only as far as needed, and begins the rings after the zoom completes.
+    viewport edges. Confirm the scene point at the visible viewport center stays
+    fixed, including for targets beyond the top or left edge; Highlight must
+    never pan toward the target or zoom in, must zoom out only as far as needed,
+    and must begin the rings after the zoom completes. Owlbear's internal
+    Position X/Y may change to compensate for the center-anchored scale.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

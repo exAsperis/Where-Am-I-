@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.8
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.8
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.9
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.9
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,7 +15,7 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.8)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.9)
 
 ## For players
 
@@ -54,9 +54,10 @@ setting uses room metadata, and remote GM requests use Owlbear Rodeo broadcasts.
 Highlights are temporary client-local scene items, so each recipient sees only
 their own highlight animation. Players also receive a concise toast identifying
 the GM action and its target.
-Explicit Highlight preserves the recipient's viewport position and zooms out
-only when necessary to bring every highlighted item into view. It never zooms
-in, and the rings begin after any required zoom completes.
+Explicit Highlight keeps the scene point at the center of the recipient's
+viewport stationary and zooms out only when necessary to bring every
+highlighted item into view. It never zooms in or pans toward the target, and the
+rings begin after any required zoom completes.
 
 ## Support
 

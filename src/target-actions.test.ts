@@ -184,7 +184,7 @@ describe("viewport focus service", () => {
     expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
   });
 
-  it("zooms out at the same viewport position before explicit Highlight", async () => {
+  it("zooms out around the visible viewport center before explicit Highlight", async () => {
     sdk.scene.items.getItemBounds.mockResolvedValueOnce({
       min: { x: -1_000, y: -600 },
       max: { x: 1_000, y: 600 },
@@ -201,7 +201,7 @@ describe("viewport focus service", () => {
     });
 
     expect(sdk.viewport.animateTo).toHaveBeenCalledWith({
-      position: { x: 0, y: 0 },
+      position: { x: 80, y: 60 },
       scale: 0.4,
     });
     expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
@@ -210,8 +210,8 @@ describe("viewport focus service", () => {
     );
   });
 
-  it("fits Highlight around the actual viewport center, not its transform position", async () => {
-    const originalPosition = { x: -48_000, y: -30_000 };
+  it("compensates the transform position to keep the visible center stationary", async () => {
+    const originalPosition = { x: -100, y: -200 };
     sdk.scene.items.getItemBounds.mockResolvedValueOnce({
       min: { x: 900, y: 900 },
       max: { x: 1_900, y: 1_500 },
@@ -235,7 +235,10 @@ describe("viewport focus service", () => {
       y: 300,
     });
     expect(sdk.viewport.animateTo).toHaveBeenCalledWith({
-      position: originalPosition,
+      position: {
+        x: 400 + (originalPosition.x - 400) * (8 / 9),
+        y: 300 + (originalPosition.y - 300) * (8 / 9),
+      },
       scale: 4 / 9,
     });
   });

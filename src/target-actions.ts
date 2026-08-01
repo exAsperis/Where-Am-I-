@@ -5,6 +5,7 @@ import {
   FOCUS_HIGHLIGHT_DELAY_MS,
 } from "./constants";
 import {
+  calculateCenterAnchoredViewportPosition,
   calculateHighlightFitScale,
   createBoundsForZoom,
   capBoundsZoom,
@@ -91,7 +92,20 @@ async function zoomOutToShowHighlightTargets(items: readonly Item[]) {
       height,
     );
     if (fitScale !== undefined) {
-      await OBR.viewport.animateTo({ position, scale: fitScale });
+      const targetPosition = calculateCenterAnchoredViewportPosition(
+        position,
+        scale,
+        fitScale,
+        width,
+        height,
+      );
+      if (!targetPosition) {
+        throw new Error("Invalid Highlight viewport transform.");
+      }
+      await OBR.viewport.animateTo({
+        position: targetPosition,
+        scale: fitScale,
+      });
     }
   } catch (error) {
     console.error("Where am I? could not fit Highlight targets.", error);

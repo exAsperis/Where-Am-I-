@@ -20,13 +20,14 @@ selectable without crowding each player and character tile.
   requested Focus respect the viewing client's saved preference and start 500
   milliseconds after viewport movement completes.
 - Before an explicit Highlight, each receiving client independently zooms out
-  only when its target bounds do not fit. Preserve the exact viewport position,
-  never increase scale, use no extra framing padding, and begin the rings after
-  any required zoom animation. A viewport adjustment failure does not suppress
-  the highlight.
+  only when its target bounds do not fit. Preserve the scene point at the
+  visible viewport center, never pan toward the target, never increase scale,
+  use no extra framing padding, and begin the rings after any required zoom
+  animation. A viewport adjustment failure does not suppress the highlight.
   Calculate fit around the scene point at the center of the receiving client's
-  viewport. The SDK viewport position is a transform value, not that scene
-  point, and is passed through unchanged to the zoom animation.
+  viewport. Compensate the SDK viewport transform position as scale changes so
+  that scene point remains at the screen center; the raw transform position is
+  not itself the user-visible viewport location.
 - Register GM-only background context-menu actions for Focus for Party and
   Highlight for Party. Context targets preserve exact selected item IDs and may
   include any item layer.

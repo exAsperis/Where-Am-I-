@@ -380,6 +380,40 @@ export function calculateHighlightFitScale(
   return fitScale < currentScale ? fitScale : undefined;
 }
 
+export function calculateCenterAnchoredViewportPosition(
+  currentPosition: Vector2,
+  currentScale: number,
+  targetScale: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): Vector2 | undefined {
+  const values = [
+    currentPosition.x,
+    currentPosition.y,
+    currentScale,
+    targetScale,
+    viewportWidth,
+    viewportHeight,
+  ];
+  if (
+    values.some((value) => !Number.isFinite(value)) ||
+    currentScale <= 0 ||
+    targetScale <= 0 ||
+    targetScale > currentScale ||
+    viewportWidth <= 0 ||
+    viewportHeight <= 0
+  ) {
+    return undefined;
+  }
+
+  const ratio = targetScale / currentScale;
+  const screenCenter = { x: viewportWidth / 2, y: viewportHeight / 2 };
+  return {
+    x: screenCenter.x + (currentPosition.x - screenCenter.x) * ratio,
+    y: screenCenter.y + (currentPosition.y - screenCenter.y) * ratio,
+  };
+}
+
 export function resolveEnablement(
   globalEnabled: boolean,
   playerAutoFocusEnabled: boolean,
