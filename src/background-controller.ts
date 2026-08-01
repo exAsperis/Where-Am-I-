@@ -142,10 +142,10 @@ export class BackgroundController {
       });
     };
     await Promise.all([
-      createMenu(FOCUS_PARTY_CONTEXT_MENU_ID, "Focus → Party", "FOCUS"),
+      createMenu(FOCUS_PARTY_CONTEXT_MENU_ID, "Focus for Party", "FOCUS"),
       createMenu(
         HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
-        "Highlight → Party",
+        "Highlight for Party",
         "HIGHLIGHT",
       ),
     ]);

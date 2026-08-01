@@ -188,6 +188,11 @@ h2 {
   padding: 4px 6px;
 }
 
+.color-controls option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
 .color-controls input[type="color"] {
   width: 38px;
   padding: 2px;
@@ -200,7 +205,74 @@ h2 {
   outline-offset: 2px;
 }
 
-.toggle-label {
+.setting-label-group {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  min-width: 0;
+}
+
+.toggle-control {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.setting-help {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.setting-help__button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--color-muted);
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.setting-help__button:hover,
+.setting-help__button:focus-visible {
+  background-color: var(--color-hover);
+  color: var(--color-text);
+}
+
+.setting-help__button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.setting-help__popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: -4px;
+  display: none;
+  width: min(250px, calc(100vw - 48px));
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--color-surface);
+  box-shadow: 0 6px 18px color-mix(in srgb, #000 22%, transparent);
+  color: var(--color-text);
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.setting-help--open .setting-help__popover {
+  display: block;
+}
+
+.setting-label {
   font-size: 0.88rem;
   font-weight: 650;
   line-height: 1.25;
@@ -394,9 +466,9 @@ h2 {
   flex: 0 0 38px;
   width: 38px;
   height: 38px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 6px;
-  background: var(--color-background);
+  background: transparent;
   object-fit: contain;
 }
 

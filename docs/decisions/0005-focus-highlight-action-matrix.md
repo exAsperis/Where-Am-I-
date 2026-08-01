@@ -19,8 +19,8 @@ selectable without crowding each player and character tile.
 - Explicit Highlight always displays. Highlights accompanying automatic or
   requested Focus respect the viewing client's saved preference and start 500
   milliseconds after viewport movement completes.
-- Register GM-only background context-menu actions for Focus → Party and
-  Highlight → Party. Context targets preserve exact selected item IDs and may
+- Register GM-only background context-menu actions for Focus for Party and
+  Highlight for Party. Context targets preserve exact selected item IDs and may
   include any item layer.
 - Treat explicit GM panel targets as the exact GM-resolved item set on receiving
   clients. Do not reapply client-local Character visibility classification;

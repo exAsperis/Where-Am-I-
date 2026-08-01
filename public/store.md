@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.3
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.3
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.4
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.4
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,14 +15,14 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.3)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.4)
 
 ## For players
 
 - Automatically focus your character when joining or changing scenes.
 - Focus all of your characters together whenever you choose.
 - Pick one named character from your personal list when you own several.
-- Set and save your preferred single-character zoom, which also caps how close
+- Set and save your preferred maximum zoom, which also caps how close
   multi-character focus can zoom.
 - Choose the shared GM highlight color or a persistent personal custom color.
 - Collapse Settings and retain its state for the next time the panel opens.

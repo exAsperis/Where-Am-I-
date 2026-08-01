@@ -75,6 +75,7 @@ class PopoverController {
   #allCharactersExpanded = false;
   #busyAction: string | undefined;
   #status: Status | undefined;
+  #helpId = 0;
 
   constructor(root: HTMLElement) {
     this.#root = root;
@@ -84,14 +85,25 @@ class PopoverController {
     document.documentElement.dataset.release = RELEASE_VERSION;
     const dismissMenus = (event: PointerEvent): void => {
       const target = event.target;
-      if (target instanceof Element && target.closest(".action-menu")) return;
-      for (const menu of this.#root.querySelectorAll<HTMLElement>(
-        ".action-menu--open",
-      )) {
-        menu.classList.remove("action-menu--open");
-        menu
-          .querySelector<HTMLElement>("[aria-expanded]")
-          ?.setAttribute("aria-expanded", "false");
+      if (!(target instanceof Element && target.closest(".action-menu"))) {
+        for (const menu of this.#root.querySelectorAll<HTMLElement>(
+          ".action-menu--open",
+        )) {
+          menu.classList.remove("action-menu--open");
+          menu
+            .querySelector<HTMLElement>("[aria-expanded]")
+            ?.setAttribute("aria-expanded", "false");
+        }
+      }
+      if (!(target instanceof Element && target.closest(".setting-help"))) {
+        for (const help of this.#root.querySelectorAll<HTMLElement>(
+          ".setting-help--open",
+        )) {
+          help.classList.remove("setting-help--open");
+          help
+            .querySelector<HTMLElement>("[aria-expanded]")
+            ?.setAttribute("aria-expanded", "false");
+        }
       }
     };
     document.addEventListener("pointerdown", dismissMenus);
@@ -329,6 +341,7 @@ class PopoverController {
 
     const toggle = this.#createToggle(
       "Automatically focus my character",
+      "Automatically focuses your visible characters when the extension starts or the scene changes.",
       this.#autoFocusEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updatePlayerPreference(enabled),
@@ -403,6 +416,7 @@ class PopoverController {
     controls.className = "controls";
     const globalToggle = this.#createToggle(
       "Enable Where am I? for players",
+      "Allows non-GM players to use automatic and manual Focus actions and receive remote Focus or Highlight actions.",
       this.#globalEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updateGlobalSetting(enabled),
@@ -437,7 +451,6 @@ class PopoverController {
       section.append(list);
     }
 
-    controls.append(section);
     const partyTile = document.createElement("section");
     partyTile.className = "action-tile";
     const partyIdentity = document.createElement("div");
@@ -467,7 +480,7 @@ class PopoverController {
       this.#createGmActionMenu("HIGHLIGHT", targets, false, undefined, "Party"),
     );
     partyTile.append(partyIdentity, partyActions);
-    controls.append(partyTile);
+    controls.append(partyTile, section);
     controls.append(this.#renderAllCharacterTokens());
     return controls;
   }
@@ -728,11 +741,11 @@ class PopoverController {
     menu.className = "action-menu__items";
     menu.setAttribute("role", "menu");
     const recipients: Array<{ label: string; recipient?: TargetRecipient }> = [
-      { label: "Me" },
+      { label: "for Me" },
       ...(controllingPlayerId
         ? [
             {
-              label: "Player",
+              label: "for Player",
               recipient: {
                 scope: "PLAYER" as const,
                 playerId: controllingPlayerId,
@@ -740,7 +753,7 @@ class PopoverController {
             },
           ]
         : []),
-      { label: "Party", recipient: { scope: "PARTY" } },
+      { label: "for Party", recipient: { scope: "PARTY" } },
     ];
     for (const option of recipients) {
       const item = this.#createButton(
@@ -758,7 +771,7 @@ class PopoverController {
             targetLabel,
           );
         },
-        `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel} for ${option.label}`,
+        `${action === "FOCUS" ? "Focus" : "Highlight"} ${targetLabel} ${option.label}`,
       );
       item.setAttribute("role", "menuitem");
       menu.append(item);
@@ -794,16 +807,15 @@ class PopoverController {
 
   #createToggle(
     labelText: string,
+    helpText: string,
     checked: boolean,
     disabled: boolean,
     onChange: (checked: boolean) => void,
-  ): HTMLLabelElement {
-    const label = document.createElement("label");
-    label.className = "toggle";
-    const text = document.createElement("span");
-    text.className = "toggle-label";
-    text.textContent = labelText;
+  ): HTMLElement {
+    const field = document.createElement("div");
+    field.className = "toggle";
     const input = document.createElement("input");
+    input.id = `setting-toggle-${++this.#helpId}`;
     input.type = "checkbox";
     input.checked = checked;
     input.disabled = disabled;
@@ -811,8 +823,15 @@ class PopoverController {
     const visual = document.createElement("span");
     visual.className = "switch";
     visual.setAttribute("aria-hidden", "true");
-    label.append(text, input, visual);
-    return label;
+    const control = document.createElement("label");
+    control.className = "toggle-control";
+    control.htmlFor = input.id;
+    control.append(input, visual);
+    field.append(
+      this.#createSettingLabel(labelText, helpText, input.id),
+      control,
+    );
+    return field;
   }
 
   #createSettingsSection(...settings: HTMLElement[]): HTMLDetailsElement {
@@ -847,15 +866,13 @@ class PopoverController {
     return details;
   }
 
-  #createZoomField(): HTMLLabelElement {
-    const label = document.createElement("label");
-    label.className = "setting-field";
-    const text = document.createElement("span");
-    text.className = "setting-label";
-    text.textContent = "Single-character zoom";
+  #createZoomField(): HTMLElement {
+    const field = document.createElement("div");
+    field.className = "setting-field";
     const value = document.createElement("span");
     value.className = "zoom-value";
     const input = document.createElement("input");
+    input.id = "maximum-zoom";
     input.type = "number";
     input.min = "10";
     input.max = "200";
@@ -872,18 +889,21 @@ class PopoverController {
     unit.id = "zoom-unit";
     unit.textContent = "%";
     value.append(input, unit);
-    label.append(text, value);
-    return label;
+    field.append(
+      this.#createSettingLabel(
+        "Maximum zoom",
+        "Sets the closest viewport zoom used by Focus, including when multiple characters are focused together.",
+        input.id,
+      ),
+      value,
+    );
+    return field;
   }
 
   #createHighlightColorField(): HTMLElement {
     const field = document.createElement("div");
     field.className = "setting-field color-setting";
-    const label = document.createElement("label");
-    label.className = "setting-label";
     const selectId = "highlight-color-mode";
-    label.htmlFor = selectId;
-    label.textContent = "Highlight color";
     const controls = document.createElement("div");
     controls.className = "color-controls";
     const select = document.createElement("select");
@@ -918,17 +938,77 @@ class PopoverController {
       });
       controls.append(picker);
     }
-    field.append(label, controls);
+    field.append(
+      this.#createSettingLabel(
+        "Highlight color",
+        this.#role === "GM"
+          ? "Default uses orange. A custom color becomes the shared default for players in this room."
+          : "Default uses the GM's shared room color, or orange when no custom room color is set. Custom saves your personal color.",
+        selectId,
+      ),
+      controls,
+    );
     return field;
   }
 
-  #createHighlightToggle(): HTMLLabelElement {
+  #createHighlightToggle(): HTMLElement {
     return this.#createToggle(
       "Show highlights",
+      "Shows a highlight after Focus. An explicit Highlight action is always shown even when this setting is off.",
       this.#highlightEnabled,
       this.#busyAction !== undefined,
       (enabled) => void this.#updateHighlightPreference(enabled),
     );
+  }
+
+  #createSettingLabel(
+    text: string,
+    helpText: string,
+    htmlFor?: string,
+  ): HTMLElement {
+    const wrapper = document.createElement("span");
+    wrapper.className = "setting-label-group";
+    const label = document.createElement(htmlFor ? "label" : "span");
+    label.className = "setting-label";
+    label.textContent = text;
+    if (label instanceof HTMLLabelElement && htmlFor) label.htmlFor = htmlFor;
+    const help = document.createElement("span");
+    help.className = "setting-help";
+    const helpId = `setting-help-${++this.#helpId}`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "setting-help__button";
+    button.textContent = "?";
+    button.setAttribute("aria-label", `Help for ${text}`);
+    button.setAttribute("aria-expanded", "false");
+    button.setAttribute("aria-controls", helpId);
+    const popover = document.createElement("span");
+    popover.id = helpId;
+    popover.className = "setting-help__popover";
+    popover.setAttribute("role", "tooltip");
+    popover.textContent = helpText;
+    button.addEventListener("click", () => {
+      for (const other of this.#root.querySelectorAll<HTMLElement>(
+        ".setting-help--open",
+      )) {
+        if (other === help) continue;
+        other.classList.remove("setting-help--open");
+        other
+          .querySelector<HTMLElement>("[aria-expanded]")
+          ?.setAttribute("aria-expanded", "false");
+      }
+      const open = help.classList.toggle("setting-help--open");
+      button.setAttribute("aria-expanded", String(open));
+    });
+    help.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      help.classList.remove("setting-help--open");
+      button.setAttribute("aria-expanded", "false");
+      button.focus();
+    });
+    help.append(button, popover);
+    wrapper.append(label, help);
+    return wrapper;
   }
 
   #createButton(
@@ -992,7 +1072,7 @@ class PopoverController {
       await setPlayerSingleTokenZoom(singleTokenZoom);
       this.#singleTokenZoom = singleTokenZoom;
       this.#status = {
-        message: `Single-character zoom set to ${Math.round(singleTokenZoom * 100)}%.`,
+        message: `Maximum zoom set to ${Math.round(singleTokenZoom * 100)}%.`,
         tone: "success",
       };
     });
