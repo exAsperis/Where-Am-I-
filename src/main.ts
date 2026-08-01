@@ -999,6 +999,23 @@ class PopoverController {
       }
       const open = help.classList.toggle("setting-help--open");
       button.setAttribute("aria-expanded", String(open));
+      if (open) {
+        const margin = 8;
+        const gap = 6;
+        const buttonBounds = button.getBoundingClientRect();
+        const popoverBounds = popover.getBoundingClientRect();
+        const left = Math.min(
+          Math.max(margin, buttonBounds.left - 4),
+          Math.max(margin, window.innerWidth - popoverBounds.width - margin),
+        );
+        const below = buttonBounds.bottom + gap;
+        const top =
+          below + popoverBounds.height <= window.innerHeight - margin
+            ? below
+            : Math.max(margin, buttonBounds.top - gap - popoverBounds.height);
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+      }
     });
     help.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;

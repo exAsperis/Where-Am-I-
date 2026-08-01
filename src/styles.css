@@ -251,10 +251,8 @@ h2 {
 }
 
 .setting-help__popover {
-  position: absolute;
+  position: fixed;
   z-index: 20;
-  top: calc(100% + 6px);
-  left: -4px;
   display: none;
   width: min(250px, calc(100vw - 48px));
   border: 1px solid var(--color-border);

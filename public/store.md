@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.4
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.4
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.5
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.5
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,7 +15,7 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.4)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.5)
 
 ## For players
 
