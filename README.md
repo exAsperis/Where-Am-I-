@@ -3,6 +3,8 @@
 Where am I? is an [Owlbear Rodeo](https://www.owlbear.rodeo/) extension that
 helps players and GMs focus and highlight characters on the current scene.
 
+![A GM focusing the party's characters across an Owlbear Rodeo scene](screenshots/wai-party-focus.jpg)
+
 ## For players and GMs
 
 The extension is already hosted. You do not need to download this repository,
@@ -18,6 +20,8 @@ Once installed by the room's GM, players can open **Where am I?** from the
 Owlbear Rodeo extension bar.
 
 ### Player controls
+
+![A player focusing their character with a private highlight](screenshots/wai-player-focus.jpg)
 
 - **Automatically focus my character** focuses your character when the
   extension starts and when a new scene becomes ready. It defaults to enabled.
@@ -40,6 +44,8 @@ Owlbear Rodeo player metadata.
 
 ### GM controls
 
+![The expanded GM panel with player, character, party, and scene-token controls](screenshots/wai-gm-panel-all-expanded.jpg)
+
 - **Enable Where am I? for players** enables or disables player-facing
   behavior for the room.
 - Each player and character has **Focus** and **Highlight** menus. **Me** acts
@@ -58,6 +64,15 @@ Owlbear Rodeo player metadata.
   items.
 - **Highlight color** sets the shared room default for players. Its Default
   state is orange, and a Custom color is shared by all GMs.
+
+![Pending party highlights on hidden tokens, with cancellation controls](screenshots/wai-pending-highlight.jpg)
+
+The responsive panel keeps the same controls accessible with Settings expanded
+or collapsed:
+
+| GM settings expanded                                                          | GM settings collapsed                                                                | Player settings                                                                             |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| ![GM panel with Settings expanded](screenshots/wai-gm-panel-all-expanded.jpg) | ![GM panel with Settings collapsed](screenshots/wai-gm-panel-settings-collapsed.jpg) | ![Player panel with Settings expanded](screenshots/wai-player-panel-settings-explanded.jpg) |
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
 saved zoom and highlight settings, while remotely focused players use

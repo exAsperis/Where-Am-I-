@@ -16,6 +16,9 @@ if (!versionMatch) {
 const expected = packageJson.version;
 const storeImageMatch = storeSource.match(/^image:\s*(\S+)\s*$/m);
 const storeIconMatch = storeSource.match(/^icon:\s*(\S+)\s*$/m);
+const storeVersionedAssetUrls = [
+  ...storeSource.matchAll(/https:\/\/\S+\?v=[^\s)]+/g),
+].map((match) => match[0]);
 
 if (!storeImageMatch || !storeIconMatch) {
   throw new Error("Could not read store image URLs from public/store.md");
@@ -50,6 +53,13 @@ const versions = new Map([
   ],
   ["src/version.ts", versionMatch[1]],
 ]);
+
+for (const [index, assetUrl] of storeVersionedAssetUrls.entries()) {
+  versions.set(
+    `store versioned asset query ${index + 1}`,
+    new URL(assetUrl).searchParams.get("v"),
+  );
+}
 
 const drift = [...versions].filter(([, version]) => version !== expected);
 if (drift.length > 0) {
