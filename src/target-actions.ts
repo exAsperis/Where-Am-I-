@@ -64,6 +64,20 @@ async function resolveItems(
       : [...(itemsOrIds as readonly Item[])];
 }
 
+function allRequestedItemsAreVisible(
+  itemsOrIds: readonly Item[] | readonly string[],
+  items: readonly Item[],
+): boolean {
+  const expectedIds = new Set(
+    itemsOrIds.map((itemOrId) =>
+      typeof itemOrId === "string" ? itemOrId : itemOrId.id,
+    ),
+  );
+  return (
+    items.length === expectedIds.size && items.every((item) => item.visible)
+  );
+}
+
 function waitForFocusHighlight(): Promise<void> {
   return new Promise((resolve) => {
     globalThis.setTimeout(resolve, FOCUS_HIGHLIGHT_DELAY_MS);
@@ -115,6 +129,7 @@ async function zoomOutToShowHighlightTargets(items: readonly Item[]) {
 export async function highlightItems(
   itemsOrIds: readonly Item[] | readonly string[],
   color?: string,
+  requireVisible = false,
 ): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -122,6 +137,9 @@ export async function highlightItems(
     }
     const items = await resolveItems(itemsOrIds);
     if (items.length === 0) return { ok: false, reason: "NOT_FOUND" };
+    if (requireVisible && !allRequestedItemsAreVisible(itemsOrIds, items)) {
+      return { ok: false, reason: "NOT_FOUND" };
+    }
     await zoomOutToShowHighlightTargets(items);
     await showHighlights(items, true, color);
     return { ok: true, itemCount: items.length };
@@ -174,6 +192,7 @@ export async function focusViewportOnItems(
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
   highlightEnabled = true,
   highlightColor?: string,
+  requireVisible = false,
 ): Promise<TargetActionResult> {
   return focusViewportOnItemsInternal(
     itemsOrIds,
@@ -181,6 +200,7 @@ export async function focusViewportOnItems(
     highlightEnabled,
     undefined,
     highlightColor,
+    requireVisible,
   );
 }
 
@@ -190,6 +210,7 @@ async function focusViewportOnItemsInternal(
   highlightEnabled: boolean,
   includeHidden: boolean | undefined,
   highlightColor: string | undefined,
+  requireVisible = false,
 ): Promise<TargetActionResult> {
   try {
     if (!(await OBR.scene.isReady())) {
@@ -200,6 +221,9 @@ async function focusViewportOnItemsInternal(
         ? await resolveItems(itemsOrIds)
         : await resolveCharacterItems(itemsOrIds, includeHidden);
     if (items.length === 0) {
+      return { ok: false, reason: "NOT_FOUND" };
+    }
+    if (requireVisible && !allRequestedItemsAreVisible(itemsOrIds, items)) {
       return { ok: false, reason: "NOT_FOUND" };
     }
     const ids = items.map((item) => item.id);

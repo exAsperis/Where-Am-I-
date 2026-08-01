@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.9
-icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.7.9
+image: https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.8.0
+icon: https://exasperis.github.io/Where-Am-I-/icon.svg?v=0.8.0
 tags:
   - automation
 manifest: https://exasperis.github.io/Where-Am-I-/manifest.json
@@ -15,7 +15,7 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.7.9)
+![Where am I? extension overview](https://exasperis.github.io/Where-Am-I-/store-hero.svg?v=0.8.0)
 
 ## For players
 
@@ -36,6 +36,8 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 - Expand all scene character tokens to focus, highlight, show or hide, and move
   them.
 - Focus or highlight any context-menu selection for the whole party.
+- Queue Party actions for hidden items until every selected item is visible;
+  orange controls identify pending groups and provide cancellation.
 - Keep personal zoom and highlight preferences.
 - Set the room's shared highlight color, which defaults to orange.
 

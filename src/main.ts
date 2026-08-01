@@ -48,6 +48,17 @@ import {
   type TargetRecipient,
 } from "./remote-actions";
 import {
+  cancelPendingPartyActionsForItems,
+  findPendingActionForItem,
+  formatPendingCanceledToast,
+  formatPendingConfiguredToast,
+  formatPendingConflictToast,
+  getPendingPartyActions,
+  queuePendingPartyAction,
+  readPendingPartyActions,
+  type PendingPartyAction,
+} from "./pending-actions";
+import {
   moveCharacterTokenToViewportCenter,
   toggleCharacterTokenVisibility,
 } from "./token-actions";
@@ -84,6 +95,7 @@ class PopoverController {
   #availabilityId = 0;
   #sceneReady = false;
   #ownerOnlyEnabled = false;
+  #pendingActions: PendingPartyAction[] = [];
 
   constructor(root: HTMLElement) {
     this.#root = root;
@@ -224,12 +236,14 @@ class PopoverController {
   }
 
   async #startGmView(): Promise<void> {
-    const [players, items] = await Promise.all([
+    const [players, items, pendingActions] = await Promise.all([
       OBR.party.getPlayers(),
       this.#getSceneItems(),
+      getPendingPartyActions(),
     ]);
     this.#players = groupPlayerConnections(players);
     this.#items = items;
+    this.#pendingActions = pendingActions;
 
     this.#disposeCallbacks.push(
       OBR.party.onChange((players) => {
@@ -240,12 +254,17 @@ class PopoverController {
         this.#items = items;
         this.#render();
       }),
+      OBR.scene.onMetadataChange((metadata) => {
+        this.#pendingActions = readPendingPartyActions(metadata);
+        this.#render();
+      }),
       OBR.scene.onReadyChange((ready) => {
         this.#sceneReady = ready;
         if (ready) {
           void this.#refreshItems();
         } else {
           this.#items = [];
+          this.#pendingActions = [];
           this.#render();
         }
       }),
@@ -263,7 +282,12 @@ class PopoverController {
 
   async #refreshItems(): Promise<void> {
     try {
-      this.#items = await this.#getSceneItems();
+      const [items, pendingActions] = await Promise.all([
+        this.#getSceneItems(),
+        this.#role === "GM" ? getPendingPartyActions() : Promise.resolve([]),
+      ]);
+      this.#items = items;
+      this.#pendingActions = pendingActions;
       this.#render();
     } catch (error) {
       console.error("Where am I? could not refresh character labels.", error);
@@ -764,6 +788,9 @@ class PopoverController {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "visibility-button";
+    if (findPendingActionForItem(this.#pendingActions, character.id)) {
+      button.classList.add("visibility-button--pending");
+    }
     button.disabled = this.#busyAction !== undefined;
     button.setAttribute("aria-label", `${action} ${label}`);
     button.title = `${action} ${label}`;
@@ -796,6 +823,11 @@ class PopoverController {
   ): HTMLElement {
     const container = document.createElement("div");
     container.className = "action-menu";
+    const pending =
+      targets.length === 1
+        ? findPendingActionForItem(this.#pendingActions, targets[0]!.id)
+        : undefined;
+    const pendingForAction = pending?.action === action ? pending : undefined;
     const trigger = this.#createButton(
       action === "FOCUS" ? "Focus ▾" : "Highlight ▾",
       "small",
@@ -814,6 +846,7 @@ class PopoverController {
     );
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "false");
+    if (pendingForAction) trigger.classList.add("button--pending");
     const menu = document.createElement("div");
     menu.className = "action-menu__items";
     menu.setAttribute("role", "menu");
@@ -838,7 +871,8 @@ class PopoverController {
         "small",
         option.recipient !== undefined &&
           (!this.#globalEnabled ||
-            (option.recipient.scope === "PARTY" && this.#players.length === 0)),
+            (option.recipient.scope === "PARTY" &&
+              (this.#players.length === 0 || pendingForAction !== undefined))),
         () => {
           container.classList.remove("action-menu--open");
           trigger.setAttribute("aria-expanded", "false");
@@ -857,6 +891,22 @@ class PopoverController {
         item.setAttribute("aria-describedby", "connected-players-availability");
       }
       menu.append(item);
+    }
+    if (pendingForAction) {
+      const cancel = this.#createButton(
+        "Cancel",
+        "small",
+        this.#busyAction !== undefined,
+        () => {
+          container.classList.remove("action-menu--open");
+          trigger.setAttribute("aria-expanded", "false");
+          void this.#cancelPendingAction(pendingForAction);
+        },
+        `Cancel pending ${action === "FOCUS" ? "focus" : "highlight"} for ${targetLabel}`,
+      );
+      cancel.classList.add("button--pending-cancel");
+      cancel.setAttribute("role", "menuitem");
+      menu.append(cancel);
     }
     container.addEventListener("keydown", (event) => {
       const items = [
@@ -1299,14 +1349,51 @@ class PopoverController {
         if ((await OBR.player.getRole()) !== "GM") {
           throw new Error("Only a GM can send a remote target action.");
         }
+        const actorName = (await OBR.player.getName()).trim() || "The GM";
+        let targetIds = targets.map((target) => target.id);
+        if (recipient.scope === "PARTY") {
+          const queued = await queuePendingPartyAction({
+            action,
+            targetIds,
+            targetMode: "ALL_ITEMS",
+            actorName,
+            targetLabel,
+          });
+          if (queued.kind === "CONFLICT") {
+            const message = formatPendingConflictToast(
+              action,
+              queued.item,
+              queued.pending,
+            );
+            this.#status = { message, tone: "error" };
+            await OBR.notification.show(message, "ERROR");
+            return;
+          }
+          if (queued.kind === "MISSING") {
+            this.#status = {
+              message: "One or more selected items are no longer available.",
+              tone: "error",
+            };
+            return;
+          }
+          if (queued.kind === "QUEUED") {
+            this.#pendingActions = await getPendingPartyActions();
+            const message = formatPendingConfiguredToast(queued.pending);
+            this.#status = { message, tone: "success" };
+            await OBR.notification.show(message, "INFO");
+            return;
+          }
+          targetIds = queued.targetIds;
+        }
         const command = createTargetActionCommand(
           action,
           recipient,
-          targets.map((target) => target.id),
-          includeHidden,
+          targetIds,
+          recipient.scope === "PARTY" ? false : includeHidden,
           "ALL_ITEMS",
-          (await OBR.player.getName()).trim() || "The GM",
+          actorName,
           targetLabel,
+          recipient.scope === "PARTY" ? { requireVisible: true } : undefined,
         );
         await OBR.broadcast.sendMessage(
           TARGET_ACTION_BROADCAST_CHANNEL,
@@ -1334,6 +1421,20 @@ class PopoverController {
               this.#getEffectiveHighlightColor(),
             );
       this.#setTargetActionStatus(result, action);
+    });
+  }
+
+  async #cancelPendingAction(pending: PendingPartyAction): Promise<void> {
+    await this.#runAction(`cancel-pending-${pending.id}`, async () => {
+      const removed = await cancelPendingPartyActionsForItems(
+        pending.action,
+        pending.targetIds,
+      );
+      if (removed.length === 0) return;
+      this.#pendingActions = await getPendingPartyActions();
+      const message = formatPendingCanceledToast(pending);
+      this.#status = { message, tone: "success" };
+      await OBR.notification.show(message, "INFO");
     });
   }
 

@@ -272,6 +272,27 @@ describe("viewport focus service", () => {
     expect(sdk.viewport.animateToBounds).toHaveBeenCalled();
   });
 
+  it("rejects a pending all-item action if a target is hidden again", async () => {
+    const hidden = item("hidden", { layer: "PROP", visible: false });
+    await expect(highlightItems([hidden], undefined, true)).resolves.toEqual({
+      ok: false,
+      reason: "NOT_FOUND",
+    });
+    await expect(
+      focusViewportOnItems([hidden], 0.5, true, undefined, true),
+    ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
+    expect(sdk.viewport.animateTo).not.toHaveBeenCalled();
+    expect(sdk.viewport.animateToBounds).not.toHaveBeenCalled();
+  });
+
+  it("rejects a pending all-item action if any original target was deleted", async () => {
+    sdk.scene.items.getItems.mockResolvedValueOnce([item("remaining")]);
+    await expect(
+      highlightItems(["remaining", "deleted"], undefined, true),
+    ).resolves.toEqual({ ok: false, reason: "NOT_FOUND" });
+    expect(highlight.showHighlights).not.toHaveBeenCalled();
+  });
+
   it("frames all visible characters owned by the target player", async () => {
     sdk.scene.items.getItems.mockResolvedValue([
       item("one"),

@@ -91,6 +91,25 @@ describe("remote target action validation and routing", () => {
     });
   });
 
+  it("supports a stable pending execution envelope and visibility requirement", () => {
+    const command = createTargetActionCommand(
+      "FOCUS",
+      { scope: "PARTY" },
+      ["item-1"],
+      false,
+      "ALL_ITEMS",
+      "GM Ada",
+      "Ancient Dragon",
+      { requestId: "pending-request", sentAt: 42, requireVisible: true },
+    );
+    expect(command).toMatchObject({
+      requestId: "pending-request",
+      sentAt: 42,
+      requireVisible: true,
+    });
+    expect(isTargetActionCommand(command)).toBe(true);
+  });
+
   it("formats succinct player and party toast messages", () => {
     expect(
       formatTargetActionToast({

@@ -51,6 +51,11 @@ Owlbear Rodeo player metadata.
   each token's icon-based Show/Hide control and **Move here** action.
 - The GM item context menu can Focus or Highlight any selected items for the
   Party, regardless of item layer.
+- Party actions targeting hidden items remain pending until every selected item
+  is visible. Orange borders identify the pending visibility and action
+  controls; use **Cancel** in that action menu or the GM context menu to cancel
+  the whole group. Multiple pending groups are allowed when they do not share
+  items.
 - **Highlight color** sets the shared room default for players. Its Default
   state is orange, and a Custom color is shared by all GMs.
 
@@ -207,6 +212,17 @@ connection:
     never pan toward the target or zoom in, must zoom out only as far as needed,
     and must begin the rings after the zoom completes. Owlbear's internal
     Position X/Y may change to compensate for the center-anchored scale.
+36. Queue Focus for Party and Highlight for Party on hidden Character and
+    non-Character items. Confirm orange eye/action borders, GM setup toasts,
+    conditional context-menu cancellation, and whole-group cancellation.
+37. Queue multiple disjoint groups, then try overlapping and cross-action
+    groups. Confirm the entire conflicting request is rejected with an error
+    naming the occupied item and existing action.
+38. With a mixed visible/hidden group, confirm nothing executes until every
+    target is visible. Disconnect players or disable remote actions before
+    showing the targets, then confirm the group waits and uses the Party
+    connected when eligibility returns. Repeat with two GM clients and verify
+    players execute each group once.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

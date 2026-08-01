@@ -5,6 +5,10 @@ import {
   TARGET_ACTION_BROADCAST_CHANNEL,
   FOCUS_PARTY_CONTEXT_MENU_ID,
   HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
+  CANCEL_FOCUS_PARTY_CONTEXT_MENU_ID,
+  CANCEL_HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
+  PENDING_FOCUS_PARTY_ITEM_METADATA_KEY,
+  PENDING_HIGHLIGHT_PARTY_ITEM_METADATA_KEY,
 } from "./constants";
 import {
   focusViewportOnItems,
@@ -30,6 +34,18 @@ import {
   routeTargetAction,
   type TargetAction,
 } from "./remote-actions";
+import {
+  cancelPendingPartyActionsForItems,
+  formatPendingCanceledToast,
+  formatPendingConfiguredToast,
+  formatPendingConflictToast,
+  getPendingPartyActions,
+  getPendingTargetState,
+  isElectedPendingExecutor,
+  queuePendingPartyAction,
+  removePendingPartyActions,
+  synchronizePendingPartyMarkers,
+} from "./pending-actions";
 
 export class BackgroundController {
   readonly #disposeCallbacks: Array<() => void> = [];
@@ -40,16 +56,26 @@ export class BackgroundController {
   #autoFocusQueued = false;
   #disposed = false;
   #playerId = "";
+  #gmConnectionId = "";
+  #pendingInFlight = false;
+  #pendingQueued = false;
 
   async start(): Promise<void> {
     const role = await OBR.player.getRole();
     if (role === "GM") {
+      this.#gmConnectionId = await OBR.player.getConnectionId();
       this.#disposeCallbacks.push(
         OBR.broadcast.onMessage(TARGET_ACTION_BROADCAST_CHANNEL, ({ data }) => {
           void this.#relayGmPanelAction(data);
         }),
+        OBR.scene.items.onChange(() => this.#requestPendingProcessing()),
+        OBR.scene.onMetadataChange(() => this.#requestPendingProcessing()),
+        OBR.party.onChange(() => this.#requestPendingProcessing()),
+        OBR.room.onMetadataChange(() => this.#requestPendingProcessing()),
+        OBR.scene.onReadyChange(() => this.#requestPendingProcessing()),
       );
       await this.#startGmContextMenus();
+      this.#requestPendingProcessing();
       return;
     }
 
@@ -131,9 +157,41 @@ export class BackgroundController {
         id,
         icons: [{ icon, label, filter: { roles: ["GM"], min: 1 } }],
         onClick: (context) => {
-          void this.#sendContextAction(
+          void this.#sendContextAction(action, context.items);
+        },
+      });
+      this.#disposeCallbacks.push(() => {
+        void OBR.contextMenu.remove(id);
+      });
+    };
+    const createCancelMenu = async (
+      id: string,
+      label: string,
+      action: TargetAction,
+      markerKey: string,
+    ): Promise<void> => {
+      await OBR.contextMenu.create({
+        id,
+        icons: [
+          {
+            icon,
+            label,
+            filter: {
+              roles: ["GM"],
+              min: 1,
+              some: [
+                {
+                  key: ["metadata", markerKey],
+                  value: true,
+                },
+              ],
+            },
+          },
+        ],
+        onClick: (context) => {
+          void this.#cancelContextActions(
             action,
-            context.items.map((item) => ({ id: item.id, name: item.name })),
+            context.items.map((item) => item.id),
           );
         },
       });
@@ -147,6 +205,18 @@ export class BackgroundController {
         HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
         "Highlight for Party",
         "HIGHLIGHT",
+      ),
+      createCancelMenu(
+        CANCEL_FOCUS_PARTY_CONTEXT_MENU_ID,
+        "Cancel pending focus",
+        "FOCUS",
+        PENDING_FOCUS_PARTY_ITEM_METADATA_KEY,
+      ),
+      createCancelMenu(
+        CANCEL_HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
+        "Cancel pending highlight",
+        "HIGHLIGHT",
+        PENDING_HIGHLIGHT_PARTY_ITEM_METADATA_KEY,
       ),
     ]);
   }
@@ -165,19 +235,126 @@ export class BackgroundController {
       targets.length === 1
         ? targets[0]?.name.trim() || "an item"
         : `${targets.length} selected items`;
+    const actor = actorName.trim() || "The GM";
+    const queued = await queuePendingPartyAction({
+      action,
+      targetIds: targets.map((target) => target.id),
+      targetMode: "ALL_ITEMS",
+      actorName: actor,
+      targetLabel,
+    });
+    if (queued.kind === "CONFLICT") {
+      await OBR.notification.show(
+        formatPendingConflictToast(action, queued.item, queued.pending),
+        "ERROR",
+      );
+      return;
+    }
+    if (queued.kind === "MISSING") return;
+    if (queued.kind === "QUEUED") {
+      await OBR.notification.show(
+        formatPendingConfiguredToast(queued.pending),
+        "INFO",
+      );
+      this.#requestPendingProcessing();
+      return;
+    }
     await OBR.broadcast.sendMessage(
       TARGET_ACTION_BROADCAST_CHANNEL,
       createTargetActionCommand(
         action,
         { scope: "PARTY" },
-        targets.map((target) => target.id),
-        true,
+        queued.targetIds,
+        false,
         "ALL_ITEMS",
-        actorName.trim() || "The GM",
+        actor,
         targetLabel,
+        { requireVisible: true },
       ),
       { destination: "REMOTE" },
     );
+  }
+
+  async #cancelContextActions(
+    action: TargetAction,
+    itemIds: readonly string[],
+  ): Promise<void> {
+    const removed = await cancelPendingPartyActionsForItems(action, itemIds);
+    if (removed.length === 0) return;
+    const message =
+      removed.length === 1
+        ? formatPendingCanceledToast(removed[0]!)
+        : `${removed.length} pending ${action === "FOCUS" ? "Focus" : "Highlight"} for Party actions canceled.`;
+    await OBR.notification.show(message, "INFO");
+  }
+
+  #requestPendingProcessing(): void {
+    if (this.#disposed) return;
+    if (this.#pendingInFlight) {
+      this.#pendingQueued = true;
+      return;
+    }
+    void this.#processPendingActions();
+  }
+
+  async #processPendingActions(): Promise<void> {
+    this.#pendingInFlight = true;
+    try {
+      if (!(await OBR.scene.isReady())) return;
+      const [pendingActions, players, roomSettings] = await Promise.all([
+        getPendingPartyActions(),
+        OBR.party.getPlayers(),
+        getRoomSettings(),
+      ]);
+      if (!isElectedPendingExecutor(this.#gmConnectionId, players)) return;
+      await synchronizePendingPartyMarkers(pendingActions);
+      if (
+        !roomSettings.globalEnabled ||
+        !players.some((player) => player.role !== "GM")
+      ) {
+        return;
+      }
+
+      for (const pending of pendingActions) {
+        const items = await OBR.scene.items.getItems(pending.targetIds);
+        const targetState = getPendingTargetState(pending, items);
+        if (targetState === "MISSING") {
+          await removePendingPartyActions([pending.id]);
+          continue;
+        }
+        if (targetState === "HIDDEN") continue;
+        await OBR.broadcast.sendMessage(
+          TARGET_ACTION_BROADCAST_CHANNEL,
+          createTargetActionCommand(
+            pending.action,
+            { scope: "PARTY" },
+            pending.targetIds,
+            false,
+            pending.targetMode,
+            pending.actorName,
+            pending.targetLabel,
+            {
+              requestId: pending.executionRequestId,
+              sentAt: Date.now(),
+              requireVisible: true,
+            },
+          ),
+          { destination: "REMOTE" },
+        );
+        await removePendingPartyActions([pending.id]);
+      }
+    } catch (error) {
+      console.error(
+        "Where am I? could not process pending Party actions.",
+        error,
+      );
+    } finally {
+      this.#pendingInFlight = false;
+      if (this.#pendingQueued) {
+        this.#pendingQueued = false;
+        this.#requestPendingProcessing();
+      }
+    }
   }
 
   dispose(): void {
@@ -275,6 +452,7 @@ export class BackgroundController {
             result = await highlightItems(
               command.targetCharacterIds,
               highlightColor,
+              command.requireVisible,
             );
           } else if (command.targetMode === "ALL_ITEMS") {
             result = await focusViewportOnItems(
@@ -282,6 +460,7 @@ export class BackgroundController {
               settings.singleTokenZoom,
               settings.highlightEnabled,
               highlightColor,
+              command.requireVisible,
             );
           } else if (command.action === "HIGHLIGHT") {
             result = await highlightCharacterItems(

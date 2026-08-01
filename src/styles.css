@@ -379,6 +379,16 @@ h2 {
   color: var(--color-text);
 }
 
+.button--pending,
+.button--pending-cancel,
+.visibility-button.visibility-button--pending {
+  border-color: #fa5300;
+}
+
+.button--pending-cancel {
+  color: #fa5300;
+}
+
 .toggle:hover:not(:has(input:disabled)),
 .setting-field:hover,
 .player-group:hover:not(:has(.character-row:hover)),

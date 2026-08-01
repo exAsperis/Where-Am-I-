@@ -13,6 +13,7 @@ export interface TargetActionCommand {
   targetCharacterIds: string[];
   includeHidden: boolean;
   targetMode?: "CHARACTERS" | "ALL_ITEMS";
+  requireVisible?: boolean;
   actorName?: string;
   targetLabel?: string;
   requestId: string;
@@ -79,6 +80,8 @@ export function isTargetActionCommand(
     (value.targetMode === undefined ||
       value.targetMode === "CHARACTERS" ||
       value.targetMode === "ALL_ITEMS") &&
+    (value.requireVisible === undefined ||
+      typeof value.requireVisible === "boolean") &&
     (value.actorName === undefined ||
       (typeof value.actorName === "string" && value.actorName.length > 0)) &&
     (value.targetLabel === undefined ||
@@ -175,6 +178,11 @@ export function createTargetActionCommand(
   targetMode: "CHARACTERS" | "ALL_ITEMS" = "CHARACTERS",
   actorName?: string,
   targetLabel?: string,
+  options?: {
+    requestId?: string;
+    sentAt?: number;
+    requireVisible?: boolean;
+  },
 ): TargetActionCommand {
   return {
     type: "TARGET_ACTION",
@@ -183,10 +191,11 @@ export function createTargetActionCommand(
     targetCharacterIds: [...targetCharacterIds],
     includeHidden,
     targetMode,
+    ...(options?.requireVisible ? { requireVisible: true } : {}),
     ...(actorName ? { actorName } : {}),
     ...(targetLabel ? { targetLabel } : {}),
-    requestId: crypto.randomUUID(),
-    sentAt: Date.now(),
+    requestId: options?.requestId ?? crypto.randomUUID(),
+    sentAt: options?.sentAt ?? Date.now(),
   };
 }
 
