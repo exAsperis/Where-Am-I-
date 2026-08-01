@@ -333,7 +333,7 @@ export function capBoundsZoom(
 
 export function calculateHighlightFitScale(
   targetBounds: BoundingBox,
-  viewportPosition: Vector2,
+  viewportCenter: Vector2,
   currentScale: number,
   viewportWidth: number,
   viewportHeight: number,
@@ -343,8 +343,8 @@ export function calculateHighlightFitScale(
     targetBounds.min.y,
     targetBounds.max.x,
     targetBounds.max.y,
-    viewportPosition.x,
-    viewportPosition.y,
+    viewportCenter.x,
+    viewportCenter.y,
     currentScale,
     viewportWidth,
     viewportHeight,
@@ -361,12 +361,12 @@ export function calculateHighlightFitScale(
   }
 
   const requiredHalfWidth = Math.max(
-    Math.abs(targetBounds.min.x - viewportPosition.x),
-    Math.abs(targetBounds.max.x - viewportPosition.x),
+    Math.abs(targetBounds.min.x - viewportCenter.x),
+    Math.abs(targetBounds.max.x - viewportCenter.x),
   );
   const requiredHalfHeight = Math.max(
-    Math.abs(targetBounds.min.y - viewportPosition.y),
-    Math.abs(targetBounds.max.y - viewportPosition.y),
+    Math.abs(targetBounds.min.y - viewportCenter.y),
+    Math.abs(targetBounds.max.y - viewportCenter.y),
   );
   const horizontalScale =
     requiredHalfWidth === 0

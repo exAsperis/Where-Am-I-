@@ -19,6 +19,7 @@ const sdk = vi.hoisted(() => ({
     getScale: vi.fn(),
     getWidth: vi.fn(),
     getHeight: vi.fn(),
+    inverseTransformPoint: vi.fn(),
   },
 }));
 const highlight = vi.hoisted(() => ({
@@ -74,6 +75,7 @@ describe("viewport focus service", () => {
     sdk.viewport.getScale.mockResolvedValue(0.5);
     sdk.viewport.getWidth.mockResolvedValue(800);
     sdk.viewport.getHeight.mockResolvedValue(600);
+    sdk.viewport.inverseTransformPoint.mockResolvedValue({ x: 50, y: 50 });
     highlight.showHighlights.mockResolvedValue(undefined);
     vi.spyOn(globalThis, "setTimeout").mockImplementation(((
       callback: TimerHandler,
@@ -191,6 +193,7 @@ describe("viewport focus service", () => {
       center: { x: 0, y: 0 },
     });
     sdk.viewport.getPosition.mockResolvedValueOnce({ x: 0, y: 0 });
+    sdk.viewport.inverseTransformPoint.mockResolvedValueOnce({ x: 0, y: 0 });
 
     await expect(highlightItems([item("one")], "#123456")).resolves.toEqual({
       ok: true,
@@ -205,6 +208,36 @@ describe("viewport focus service", () => {
     expect(sdk.viewport.animateTo.mock.invocationCallOrder[0]).toBeLessThan(
       highlight.showHighlights.mock.invocationCallOrder[0] ?? Infinity,
     );
+  });
+
+  it("fits Highlight around the actual viewport center, not its transform position", async () => {
+    const originalPosition = { x: -48_000, y: -30_000 };
+    sdk.scene.items.getItemBounds.mockResolvedValueOnce({
+      min: { x: 900, y: 900 },
+      max: { x: 1_900, y: 1_500 },
+      width: 1_000,
+      height: 600,
+      center: { x: 1_400, y: 1_200 },
+    });
+    sdk.viewport.getPosition.mockResolvedValueOnce(originalPosition);
+    sdk.viewport.inverseTransformPoint.mockResolvedValueOnce({
+      x: 1_000,
+      y: 1_000,
+    });
+
+    await expect(highlightItems([item("one")])).resolves.toEqual({
+      ok: true,
+      itemCount: 1,
+    });
+
+    expect(sdk.viewport.inverseTransformPoint).toHaveBeenCalledWith({
+      x: 400,
+      y: 300,
+    });
+    expect(sdk.viewport.animateTo).toHaveBeenCalledWith({
+      position: originalPosition,
+      scale: 4 / 9,
+    });
   });
 
   it("still highlights when zoom-only viewport adjustment fails", async () => {

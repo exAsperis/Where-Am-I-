@@ -24,6 +24,9 @@ selectable without crowding each player and character tile.
   never increase scale, use no extra framing padding, and begin the rings after
   any required zoom animation. A viewport adjustment failure does not suppress
   the highlight.
+  Calculate fit around the scene point at the center of the receiving client's
+  viewport. The SDK viewport position is a transform value, not that scene
+  point, and is passed through unchanged to the zoom animation.
 - Register GM-only background context-menu actions for Focus for Party and
   Highlight for Party. Context targets preserve exact selected item IDs and may
   include any item layer.

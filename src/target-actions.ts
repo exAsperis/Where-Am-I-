@@ -79,9 +79,13 @@ async function zoomOutToShowHighlightTargets(items: readonly Item[]) {
       OBR.viewport.getWidth(),
       OBR.viewport.getHeight(),
     ]);
+    const viewportCenter = await OBR.viewport.inverseTransformPoint({
+      x: width / 2,
+      y: height / 2,
+    });
     const fitScale = calculateHighlightFitScale(
       bounds,
-      position,
+      viewportCenter,
       scale,
       width,
       height,
