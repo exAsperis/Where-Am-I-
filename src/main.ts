@@ -737,13 +737,11 @@ class PopoverController {
         items[(index - 1 + items.length) % items.length]?.focus();
       }
     });
-    container.addEventListener("focusout", () => {
-      queueMicrotask(() => {
-        if (!container.contains(document.activeElement)) {
-          container.classList.remove("action-menu--open");
-          trigger.setAttribute("aria-expanded", "false");
-        }
-      });
+    container.addEventListener("focusout", (event) => {
+      const nextTarget = event.relatedTarget;
+      if (nextTarget instanceof Node && container.contains(nextTarget)) return;
+      container.classList.remove("action-menu--open");
+      trigger.setAttribute("aria-expanded", "false");
     });
     container.append(trigger, menu);
     return container;
