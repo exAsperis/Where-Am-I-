@@ -25,9 +25,13 @@ identifier.
 - Give GMs a collapsed scene-wide Character-token list with local focus,
   shared visibility, and shared position controls. Scene-wide focus may target
   hidden tokens, while player and party focus remains visible-only.
+- Keep the shared-position `Move here` control available as an opt-in GM room
+  setting, defaulting off so it is not mistaken for the viewport-only Focus
+  action.
 
 ## Consequences
 
 Existing rooms retain valid preferences after upgrading. GM visibility and
 movement actions intentionally mutate shared scene items, while focusing
-continues to affect only the initiating GM's viewport.
+continues to affect only the initiating GM's viewport. New and existing rooms
+hide the movement action until a GM explicitly enables it.

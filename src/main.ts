@@ -41,6 +41,7 @@ import {
   setPlayerSettingsExpanded,
   setPlayerHighlightColor,
   setRoomHighlightColor,
+  setShowMoveHere,
 } from "./metadata";
 import {
   createTargetActionCommand,
@@ -77,6 +78,7 @@ class PopoverController {
   readonly #disposeCallbacks: Array<() => void> = [];
   #role: Player["role"] = "PLAYER";
   #globalEnabled = true;
+  #showMoveHere = false;
   #autoFocusEnabled = true;
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
@@ -149,6 +151,7 @@ class PopoverController {
       ]);
       this.#role = role;
       this.#globalEnabled = roomSettings.globalEnabled;
+      this.#showMoveHere = roomSettings.showMoveHere;
       this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
@@ -170,6 +173,7 @@ class PopoverController {
         OBR.room.onMetadataChange((metadata) => {
           const settings = readRoomSettings(metadata);
           this.#globalEnabled = settings.globalEnabled;
+          this.#showMoveHere = settings.showMoveHere;
           this.#roomHighlightColorMode = settings.highlightColorMode;
           this.#roomHighlightColor = settings.highlightColor;
           if (!this.#globalEnabled && this.#role === "PLAYER") {
@@ -477,12 +481,20 @@ class PopoverController {
       this.#busyAction !== undefined,
       (enabled) => void this.#updateGlobalSetting(enabled),
     );
+    const moveHereToggle = this.#createToggle(
+      'Show "Move here" actions',
+      "Shows a GM-only action for moving a character token to the center of your current viewport.",
+      this.#showMoveHere,
+      this.#busyAction !== undefined,
+      (enabled) => void this.#updateShowMoveHere(enabled),
+    );
     controls.append(
       this.#createSettingsSection(
         this.#createZoomField(),
         this.#createHighlightToggle(),
         this.#createHighlightColorField(),
         globalToggle,
+        moveHereToggle,
       ),
     );
 
@@ -596,16 +608,20 @@ class PopoverController {
         const actions = document.createElement("div");
         actions.className = "character-actions character-actions--all";
         const label = getCharacterDisplay(character).characterName;
+        if (this.#showMoveHere) {
+          actions.append(
+            this.#createButton(
+              this.#busyAction === `move-token-${character.id}`
+                ? "Moving…"
+                : "Move here",
+              "small",
+              this.#busyAction !== undefined,
+              () => void this.#moveTokenToViewportCenter(character.id),
+              `Move ${label} to the center of the viewport`,
+            ),
+          );
+        }
         actions.append(
-          this.#createButton(
-            this.#busyAction === `move-token-${character.id}`
-              ? "Moving…"
-              : "Move here",
-            "small",
-            this.#busyAction !== undefined,
-            () => void this.#moveTokenToViewportCenter(character.id),
-            `Move ${label} to the center of the viewport`,
-          ),
           this.#createGmActionMenu(
             "FOCUS",
             [character],
@@ -1296,6 +1312,17 @@ class PopoverController {
         message: enabled
           ? "Player focusing is enabled."
           : "Player focusing is disabled. GM-local focusing remains available.",
+        tone: "success",
+      };
+    });
+  }
+
+  async #updateShowMoveHere(enabled: boolean): Promise<void> {
+    await this.#runAction("move-here-setting", async () => {
+      await setShowMoveHere(enabled);
+      this.#showMoveHere = enabled;
+      this.#status = {
+        message: `Move here actions are now ${enabled ? "shown" : "hidden"}.`,
         tone: "success",
       };
     });

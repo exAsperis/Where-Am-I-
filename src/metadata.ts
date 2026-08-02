@@ -2,6 +2,7 @@ import OBR, { type Metadata } from "@owlbear-rodeo/sdk";
 
 import {
   DEFAULT_GLOBAL_ENABLED,
+  DEFAULT_SHOW_MOVE_HERE,
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_HIGHLIGHT_ENABLED,
@@ -26,6 +27,7 @@ export interface PlayerSettings {
 
 export interface RoomSettings {
   globalEnabled: boolean;
+  showMoveHere: boolean;
   highlightColorMode: "DEFAULT" | "CUSTOM";
   highlightColor: string;
 }
@@ -121,6 +123,12 @@ export function readRoomSettings(metadata: Metadata): RoomSettings {
       "globalEnabled",
       DEFAULT_GLOBAL_ENABLED,
     ),
+    showMoveHere: readBooleanSetting(
+      metadata,
+      key,
+      "showMoveHere",
+      DEFAULT_SHOW_MOVE_HERE,
+    ),
     highlightColorMode: readColorMode(colors.highlightColorMode),
     highlightColor: readColor(colors.highlightColor),
   };
@@ -206,6 +214,7 @@ export async function getRoomSettings(): Promise<RoomSettings> {
     await OBR.room.setMetadata({
       [ROOM_SETTINGS_METADATA_KEY]: {
         globalEnabled: settings.globalEnabled,
+        showMoveHere: settings.showMoveHere,
       },
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: null,
     });
@@ -219,8 +228,26 @@ export async function setGlobalEnabled(globalEnabled: boolean): Promise<void> {
     throw new Error("Only a GM can update the global Where am I? setting.");
   }
 
+  const current = await getRoomSettings();
   await OBR.room.setMetadata({
-    [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled },
+    [ROOM_SETTINGS_METADATA_KEY]: {
+      globalEnabled,
+      showMoveHere: current.showMoveHere,
+    },
+  });
+}
+
+export async function setShowMoveHere(showMoveHere: boolean): Promise<void> {
+  if ((await OBR.player.getRole()) !== "GM") {
+    throw new Error("Only a GM can update the Move here setting.");
+  }
+
+  const current = await getRoomSettings();
+  await OBR.room.setMetadata({
+    [ROOM_SETTINGS_METADATA_KEY]: {
+      globalEnabled: current.globalEnabled,
+      showMoveHere,
+    },
   });
 }
 

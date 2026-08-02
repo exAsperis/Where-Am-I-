@@ -32,6 +32,7 @@ import {
   setPlayerHighlightColor,
   setPlayerSettingsExpanded,
   setRoomHighlightColor,
+  setShowMoveHere,
   resolveHighlightColor,
 } from "./metadata";
 
@@ -112,11 +113,15 @@ describe("metadata settings", () => {
     });
     await expect(getRoomSettings()).resolves.toEqual({
       globalEnabled: false,
+      showMoveHere: false,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
     });
     expect(sdk.room.setMetadata).toHaveBeenCalledWith({
-      [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: false },
+      [ROOM_SETTINGS_METADATA_KEY]: {
+        globalEnabled: false,
+        showMoveHere: false,
+      },
       [LEGACY_ROOM_SETTINGS_METADATA_KEY]: null,
     });
 
@@ -127,6 +132,7 @@ describe("metadata settings", () => {
     });
     await expect(getRoomSettings()).resolves.toEqual({
       globalEnabled: false,
+      showMoveHere: false,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
     });
@@ -149,6 +155,7 @@ describe("metadata settings", () => {
       }).singleTokenZoom,
     ).toBe(0.5);
     expect(readRoomSettings({}).globalEnabled).toBe(true);
+    expect(readRoomSettings({}).showMoveHere).toBe(false);
     expect(
       readRoomSettings({
         [ROOM_SETTINGS_METADATA_KEY]: { globalEnabled: null },
@@ -241,6 +248,24 @@ describe("metadata settings", () => {
         highlightColor: "#fa5300",
         settingsExpanded: true,
         targetIndicatorEnabled: false,
+      },
+    });
+  });
+
+  it("persists the GM Move here preference without changing global enablement", async () => {
+    sdk.room.getMetadata.mockResolvedValue({
+      [ROOM_SETTINGS_METADATA_KEY]: {
+        globalEnabled: false,
+        showMoveHere: false,
+      },
+    });
+
+    await setShowMoveHere(true);
+
+    expect(sdk.room.setMetadata).toHaveBeenLastCalledWith({
+      [ROOM_SETTINGS_METADATA_KEY]: {
+        globalEnabled: false,
+        showMoveHere: true,
       },
     });
   });

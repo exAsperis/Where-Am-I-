@@ -54,7 +54,8 @@ Owlbear Rodeo player metadata.
 - The **Party** tile provides Focus and Highlight actions for **Me** and
   **Party**.
 - **All character tokens** provides the same Me/Party actions while retaining
-  each token's icon-based Show/Hide control and **Move here** action.
+  each token's icon-based Show/Hide control. GMs can optionally show the
+  default-hidden **Move here** action from Settings.
 - The GM item context menu can Focus or Highlight any selected items for the
   Party, regardless of item layer.
 - Party actions targeting hidden items remain pending until every selected item

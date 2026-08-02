@@ -16,6 +16,7 @@ export const PENDING_FOCUS_PARTY_ITEM_METADATA_KEY = `${EXTENSION_NAMESPACE}/pen
 export const PENDING_HIGHLIGHT_PARTY_ITEM_METADATA_KEY = `${EXTENSION_NAMESPACE}/pending-highlight-party`;
 
 export const DEFAULT_GLOBAL_ENABLED = true;
+export const DEFAULT_SHOW_MOVE_HERE = false;
 export const DEFAULT_PLAYER_AUTO_FOCUS_ENABLED = true;
 export const DEFAULT_HIGHLIGHT_ENABLED = true;
 export const DEFAULT_SETTINGS_EXPANDED = false;
