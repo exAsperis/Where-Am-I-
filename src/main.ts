@@ -607,6 +607,10 @@ class PopoverController {
         const display = this.#createCharacterIdentity(character);
         const actions = document.createElement("div");
         actions.className = "character-actions character-actions--all";
+        actions.classList.toggle(
+          "character-actions--with-move",
+          this.#showMoveHere,
+        );
         const label = getCharacterDisplay(character).characterName;
         if (this.#showMoveHere) {
           actions.append(

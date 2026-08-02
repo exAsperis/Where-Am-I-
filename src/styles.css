@@ -535,6 +535,10 @@ h2 {
 
 .character-actions--all {
   grid-column: 1 / -1;
+  justify-self: end;
+}
+
+.character-actions--with-move {
   grid-template-columns: minmax(0, 1fr) 87.5px 87.5px;
   width: 100%;
 }
