@@ -316,6 +316,23 @@ export async function focusViewportOnPlayerCharacters(
     : targets;
 }
 
+export async function focusViewportOnAllCharacters(
+  singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,
+  highlightEnabled = true,
+  highlightColor?: string,
+): Promise<TargetActionResult> {
+  const scene = await getReadySceneItems();
+  return scene.ok
+    ? focusViewportOnCharacterItems(
+        scene.items,
+        singleTokenZoom,
+        highlightEnabled,
+        false,
+        highlightColor,
+      )
+    : scene;
+}
+
 export async function focusViewportOnPartyCharacters(
   playerIds: ReadonlySet<string>,
   singleTokenZoom = DEFAULT_SINGLE_TOKEN_ZOOM,

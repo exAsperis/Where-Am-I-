@@ -114,6 +114,23 @@ h2 {
   padding-top: 8px;
 }
 
+.settings-group {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-group + .settings-group {
+  margin-top: 4px;
+}
+
+.settings-group h3 {
+  margin: 4px 2px 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .toggle {
   display: grid;
   grid-template-columns: 1fr auto;

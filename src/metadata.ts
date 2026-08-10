@@ -4,6 +4,7 @@ import {
   DEFAULT_GLOBAL_ENABLED,
   DEFAULT_SHOW_MOVE_HERE,
   DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
+  DEFAULT_GM_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_HIGHLIGHT_ENABLED,
   DEFAULT_SETTINGS_EXPANDED,
@@ -18,6 +19,7 @@ import { normalizeZoomScale } from "./domain";
 
 export interface PlayerSettings {
   autoFocusEnabled: boolean;
+  gmAutoFocusEnabled: boolean;
   singleTokenZoom: number;
   highlightEnabled: boolean;
   settingsExpanded: boolean;
@@ -90,6 +92,10 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
       "autoFocusEnabled",
       DEFAULT_PLAYER_AUTO_FOCUS_ENABLED,
     ),
+    gmAutoFocusEnabled:
+      typeof settings.gmAutoFocusEnabled === "boolean"
+        ? settings.gmAutoFocusEnabled
+        : DEFAULT_GM_AUTO_FOCUS_ENABLED,
     singleTokenZoom:
       "singleTokenZoom" in settings
         ? normalizeZoomScale(settings.singleTokenZoom)
@@ -173,6 +179,12 @@ export async function setPlayerAutoFocusEnabled(
   autoFocusEnabled: boolean,
 ): Promise<void> {
   await updatePlayerSettings({ autoFocusEnabled });
+}
+
+export async function setGmAutoFocusEnabled(
+  gmAutoFocusEnabled: boolean,
+): Promise<void> {
+  await updatePlayerSettings({ gmAutoFocusEnabled });
 }
 
 export async function setPlayerSingleTokenZoom(

@@ -36,6 +36,7 @@ import {
   readRoomSettings,
   setGlobalEnabled,
   setPlayerAutoFocusEnabled,
+  setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
   setPlayerSettingsExpanded,
@@ -80,6 +81,7 @@ class PopoverController {
   #globalEnabled = true;
   #showMoveHere = false;
   #autoFocusEnabled = true;
+  #gmAutoFocusEnabled = false;
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
   #settingsExpanded = false;
@@ -153,6 +155,7 @@ class PopoverController {
       this.#globalEnabled = roomSettings.globalEnabled;
       this.#showMoveHere = roomSettings.showMoveHere;
       this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
+      this.#gmAutoFocusEnabled = playerSettings.gmAutoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
       this.#settingsExpanded = playerSettings.settingsExpanded;
@@ -187,6 +190,7 @@ class PopoverController {
         OBR.player.onChange((player) => {
           const settings = readPlayerSettings(player.metadata);
           this.#autoFocusEnabled = settings.autoFocusEnabled;
+          this.#gmAutoFocusEnabled = settings.gmAutoFocusEnabled;
           this.#singleTokenZoom = settings.singleTokenZoom;
           this.#highlightEnabled = settings.highlightEnabled;
           this.#settingsExpanded = settings.settingsExpanded;
@@ -488,13 +492,27 @@ class PopoverController {
       this.#busyAction !== undefined,
       (enabled) => void this.#updateShowMoveHere(enabled),
     );
+    const gmAutoFocusToggle = this.#createToggle(
+      "Automatically focus all characters",
+      "Automatically focuses all visible Character-layer items for you when the extension starts or the scene changes. This setting applies only to this GM.",
+      this.#gmAutoFocusEnabled,
+      this.#busyAction !== undefined,
+      (enabled) => void this.#updateGmAutoFocusPreference(enabled),
+    );
     controls.append(
       this.#createSettingsSection(
-        this.#createZoomField(),
-        this.#createHighlightToggle(),
-        this.#createHighlightColorField(),
-        globalToggle,
-        moveHereToggle,
+        this.#createSettingsGroup(
+          "Room settings",
+          globalToggle,
+          moveHereToggle,
+          this.#createHighlightColorField(),
+        ),
+        this.#createSettingsGroup(
+          "My settings",
+          this.#createZoomField(),
+          gmAutoFocusToggle,
+          this.#createHighlightToggle(),
+        ),
       ),
     );
 
@@ -1018,6 +1036,18 @@ class PopoverController {
     return details;
   }
 
+  #createSettingsGroup(
+    headingText: string,
+    ...settings: HTMLElement[]
+  ): HTMLElement {
+    const group = document.createElement("section");
+    group.className = "settings-group";
+    const heading = document.createElement("h3");
+    heading.textContent = headingText;
+    group.append(heading, ...settings);
+    return group;
+  }
+
   #createZoomField(): HTMLElement {
     const field = document.createElement("div");
     field.className = "setting-field";
@@ -1241,6 +1271,17 @@ class PopoverController {
         message: enabled
           ? "Automatic focusing is enabled."
           : "Automatic focusing is disabled. Focus me now remains available.",
+        tone: "success",
+      };
+    });
+  }
+
+  async #updateGmAutoFocusPreference(enabled: boolean): Promise<void> {
+    await this.#runAction("gm-auto-focus-setting", async () => {
+      await setGmAutoFocusEnabled(enabled);
+      this.#gmAutoFocusEnabled = enabled;
+      this.#status = {
+        message: `Automatic GM focusing is ${enabled ? "enabled" : "disabled"}.`,
         tone: "success",
       };
     });

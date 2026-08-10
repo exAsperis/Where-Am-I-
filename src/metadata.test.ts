@@ -27,6 +27,7 @@ import {
   getPlayerSettings,
   getRoomSettings,
   setPlayerAutoFocusEnabled,
+  setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
   setPlayerHighlightColor,
@@ -141,6 +142,7 @@ describe("metadata settings", () => {
 
   it("defaults missing or malformed settings to enabled", () => {
     expect(readPlayerSettings({}).autoFocusEnabled).toBe(true);
+    expect(readPlayerSettings({}).gmAutoFocusEnabled).toBe(false);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
     expect(readPlayerSettings({}).highlightEnabled).toBe(true);
     expect(readPlayerSettings({}).settingsExpanded).toBe(false);
@@ -191,6 +193,7 @@ describe("metadata settings", () => {
     sdk.player.getMetadata.mockResolvedValue({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
         highlightColorMode: "DEFAULT",
@@ -203,6 +206,7 @@ describe("metadata settings", () => {
     expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
         highlightColorMode: "DEFAULT",
@@ -216,6 +220,7 @@ describe("metadata settings", () => {
     expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 1,
         highlightEnabled: false,
         highlightColorMode: "DEFAULT",
@@ -229,6 +234,7 @@ describe("metadata settings", () => {
     expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: true,
         highlightColorMode: "DEFAULT",
@@ -242,11 +248,26 @@ describe("metadata settings", () => {
     expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: true,
+        targetIndicatorEnabled: false,
+      },
+    });
+
+    await setGmAutoFocusEnabled(true);
+    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
+      [PLAYER_SETTINGS_METADATA_KEY]: {
+        autoFocusEnabled: true,
+        gmAutoFocusEnabled: true,
+        singleTokenZoom: 0.75,
+        highlightEnabled: false,
+        highlightColorMode: "DEFAULT",
+        highlightColor: "#fa5300",
+        settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
     });
