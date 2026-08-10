@@ -64,8 +64,14 @@ import {
   moveCharacterTokenToViewportCenter,
   toggleCharacterTokenVisibility,
 } from "./token-actions";
+import {
+  MY_SETTINGS_EXPANDED_KEY,
+  readDisclosurePreference,
+  ROOM_SETTINGS_EXPANDED_KEY,
+  writeDisclosurePreference,
+} from "./disclosure-preferences";
 import "./styles.css";
-import { RELEASE_VERSION } from "./version";
+import { DISPLAY_NAME, DISPLAY_VERSION } from "./release-channel";
 
 type StatusTone = "neutral" | "success" | "warning" | "error";
 
@@ -85,6 +91,8 @@ class PopoverController {
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
   #settingsExpanded = false;
+  #roomSettingsExpanded = readDisclosurePreference(ROOM_SETTINGS_EXPANDED_KEY);
+  #mySettingsExpanded = readDisclosurePreference(MY_SETTINGS_EXPANDED_KEY);
   #playerHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
   #playerHighlightColor = "#fa5300";
   #roomHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
@@ -106,7 +114,7 @@ class PopoverController {
   }
 
   async start(): Promise<void> {
-    document.documentElement.dataset.release = RELEASE_VERSION;
+    document.documentElement.dataset.release = DISPLAY_VERSION;
     const dismissMenus = (event: PointerEvent): void => {
       const target = event.target;
       if (!(target instanceof Element && target.closest(".action-menu"))) {
@@ -356,7 +364,7 @@ class PopoverController {
     icon.alt = "";
     const title = document.createElement("h1");
     title.id = "app-title";
-    title.textContent = "Where am I?";
+    title.textContent = DISPLAY_NAME;
     header.append(icon, title);
     app.append(header);
 
@@ -379,7 +387,7 @@ class PopoverController {
 
     const version = document.createElement("p");
     version.className = "version";
-    version.textContent = `Version ${RELEASE_VERSION}`;
+    version.textContent = `Version ${DISPLAY_VERSION}`;
     app.append(version);
 
     this.#root.append(app);
@@ -503,12 +511,22 @@ class PopoverController {
       this.#createSettingsSection(
         this.#createSettingsGroup(
           "Room settings",
+          ROOM_SETTINGS_EXPANDED_KEY,
+          this.#roomSettingsExpanded,
+          (expanded) => {
+            this.#roomSettingsExpanded = expanded;
+          },
           globalToggle,
           moveHereToggle,
           this.#createHighlightColorField(),
         ),
         this.#createSettingsGroup(
           "My settings",
+          MY_SETTINGS_EXPANDED_KEY,
+          this.#mySettingsExpanded,
+          (expanded) => {
+            this.#mySettingsExpanded = expanded;
+          },
           this.#createZoomField(),
           gmAutoFocusToggle,
           this.#createHighlightToggle(),
@@ -1038,13 +1056,29 @@ class PopoverController {
 
   #createSettingsGroup(
     headingText: string,
+    storageKey: string,
+    expanded: boolean,
+    onToggle: (expanded: boolean) => void,
     ...settings: HTMLElement[]
-  ): HTMLElement {
-    const group = document.createElement("section");
+  ): HTMLDetailsElement {
+    const group = document.createElement("details");
     group.className = "settings-group";
-    const heading = document.createElement("h3");
-    heading.textContent = headingText;
-    group.append(heading, ...settings);
+    group.open = expanded;
+    const summary = document.createElement("summary");
+    summary.textContent = headingText;
+    const content = document.createElement("div");
+    content.className = "settings-group__content";
+    content.append(...settings);
+    group.append(summary, content);
+    group.addEventListener("toggle", () => {
+      if (group.open === expanded) return;
+      expanded = group.open;
+      onToggle(expanded);
+      writeDisclosurePreference(storageKey, expanded);
+      void this.#resizeGmPopover().catch((error: unknown) => {
+        console.error("Where am I? could not resize the GM popover.", error);
+      });
+    });
     return group;
   }
 

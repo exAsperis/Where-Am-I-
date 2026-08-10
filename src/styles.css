@@ -123,12 +123,27 @@ h2 {
   margin-top: 4px;
 }
 
-.settings-group h3 {
+.settings-group > summary {
+  width: fit-content;
   margin: 4px 2px 0;
   color: var(--color-muted);
   font-size: 0.78rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.settings-group > summary:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
+.settings-group__content {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
 }
 
 .toggle {

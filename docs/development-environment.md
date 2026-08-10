@@ -84,6 +84,15 @@ Vite produces separate `main.html` and `background.html` entry pages plus the pu
 
 The production workflow in `.github/workflows/deploy-pages.yml` runs frozen installation, all internal checks, a production build, and then deploys the artifact to GitHub Pages. It requires Pages to use **GitHub Actions** as its source. A user request to prepare or release a version authorizes commit, push, deployment, and public-asset verification after the complete local release gate passes. Any failing gate stops the release before remote mutation. Rerunning a failed or cancelled remote workflow remains a separate action that requires explicit user authorization.
 
+Builds default to the `production` release channel. The beta deployment sets
+`VITE_RELEASE_CHANNEL=beta`, which automatically gives the generated manifest
+and panel the beta title, appends `-beta` to the generated version and cache
+busters, and points manifest resources at the beta host. To inspect a beta build
+locally, set that environment variable only for the build command. Keep the
+canonical source manifest and `src/version.ts` production-neutral so merging
+beta into main requires no branding cleanup. Any other channel value fails the
+build.
+
 ## Release and cache invalidation
 
 For every public behavior change, update all of these together:
