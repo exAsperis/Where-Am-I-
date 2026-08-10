@@ -55,6 +55,7 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
       highlightColorMode: "DEFAULT",
@@ -64,6 +65,7 @@ describe("metadata settings", () => {
     expect(sdk.player.setMetadata).toHaveBeenCalledWith({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
         highlightColorMode: "DEFAULT",
@@ -86,6 +88,7 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 1,
       highlightEnabled: true,
       highlightColorMode: "DEFAULT",
@@ -99,6 +102,7 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.5,
       highlightEnabled: true,
       highlightColorMode: "DEFAULT",
@@ -176,6 +180,7 @@ describe("metadata settings", () => {
       }),
     ).toEqual({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
       highlightColorMode: "DEFAULT",

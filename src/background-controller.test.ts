@@ -27,6 +27,7 @@ const sdk = vi.hoisted(() => ({
     getRole: vi.fn(async () => "GM" as const),
     getConnectionId: vi.fn(async () => "gm-a"),
     getName: vi.fn(async () => "GM Ada"),
+    getMetadata: vi.fn(async () => ({})),
   },
   broadcast: {
     onMessage: vi.fn(() => vi.fn()),

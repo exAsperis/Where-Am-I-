@@ -82,14 +82,14 @@ export class BackgroundController {
     } else {
       this.#playerId = OBR.player.id;
 
-    try {
-      this.#globalEnabled = (await getRoomSettings()).globalEnabled;
-    } catch (error) {
-      console.error(
-        "Where am I? could not read the global setting; using its enabled default.",
-        error,
-      );
-    }
+      try {
+        this.#globalEnabled = (await getRoomSettings()).globalEnabled;
+      } catch (error) {
+        console.error(
+          "Where am I? could not read the global setting; using its enabled default.",
+          error,
+        );
+      }
 
       this.#disposeCallbacks.push(
         OBR.room.onMetadataChange((metadata) => {
