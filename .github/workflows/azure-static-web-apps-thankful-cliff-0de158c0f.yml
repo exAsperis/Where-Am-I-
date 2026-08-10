@@ -34,6 +34,8 @@ jobs:
           VITE_BASE_PATH: /
       - name: Add Azure default document
         run: cp dist/main.html dist/index.html
+      - name: Point manifest at beta host
+        run: sed -i 's#https://exasperis.github.io/Where-Am-I-/#https://where-am-i-beta.ex-asperis.com/#g' dist/manifest.json
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
