@@ -1,8 +1,8 @@
 {
   "name": "where-am-i-obr-extension",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
-  "homepage": "https://exasperis.github.io/Where-Am-I-/",
+  "homepage": "https://where-am-i.ex-asperis.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/exAsperis/Where-Am-I-.git"

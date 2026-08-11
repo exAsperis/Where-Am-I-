@@ -82,7 +82,14 @@ All commands below mean the bundled pnpm invocation described above.
 
 Vite produces separate `main.html` and `background.html` entry pages plus the public `manifest.json`. The default local base is `/`; production must set `VITE_BASE_PATH` to the actual hosting subpath, including leading and trailing slashes. The GitHub Pages workflow derives `/<repository-name>/`, so a renamed repository automatically gets the matching base.
 
-The production workflow in `.github/workflows/deploy-pages.yml` runs frozen installation, all internal checks, a production build, and then deploys the artifact to GitHub Pages. It requires Pages to use **GitHub Actions** as its source. A user request to prepare or release a version authorizes commit, push, deployment, and public-asset verification after the complete local release gate passes. Any failing gate stops the release before remote mutation. Rerunning a failed or cancelled remote workflow remains a separate action that requires explicit user authorization.
+The production Azure Static Web Apps workflow runs frozen installation, all
+internal checks, a production build for the site root, and then uploads the
+prebuilt `dist/` artifact. It also copies `main.html` to `index.html` for the
+site root. A user request to prepare or release a version authorizes commit,
+push, deployment, and public-asset verification after the complete local
+release gate passes. Any failing gate stops the release before remote mutation.
+Rerunning a failed or cancelled remote workflow remains a separate action that
+requires explicit user authorization.
 
 ## Release and cache invalidation
 
@@ -98,7 +105,10 @@ For every public behavior change, update all of these together:
 
 `pnpm run check:versions` fails on drift. Add any future public URLs, including context-menu pages, to both the synchronization check and this list.
 
-The production repository is `exAsperis/Where-Am-I-`, so the GitHub Pages base and public extension root are `https://exasperis.github.io/Where-Am-I-/`. If the repository owner or name changes, update `package.json`, every hosted URL in `public/manifest.json`, and this documentation; the workflow build base will continue to derive from the repository name.
+The production public extension root is
+`https://where-am-i.ex-asperis.com/`. If the production host changes, update
+`package.json`, every hosted URL in `public/manifest.json`, the store metadata,
+and this documentation.
 
 Release order:
 

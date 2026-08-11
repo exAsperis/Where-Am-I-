@@ -14,7 +14,7 @@ build the project, deploy a package, or host your own copy.
 
 Add this public manifest URL to your Owlbear Rodeo room:
 
-<https://exasperis.github.io/Where-Am-I-/manifest.json>
+<https://where-am-i.ex-asperis.com/manifest.json>
 
 Once installed by the room's GM, players can open **Where am I?** from the
 Owlbear Rodeo extension bar.
