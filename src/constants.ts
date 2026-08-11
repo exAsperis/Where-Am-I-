@@ -20,6 +20,9 @@ export const DEFAULT_SHOW_MOVE_HERE = false;
 export const DEFAULT_PLAYER_AUTO_FOCUS_ENABLED = true;
 export const DEFAULT_GM_AUTO_FOCUS_ENABLED = false;
 export const DEFAULT_HIGHLIGHT_ENABLED = true;
+export const DEFAULT_HIGHLIGHT_THICKNESS = 12;
+export const MIN_HIGHLIGHT_THICKNESS = 1;
+export const MAX_HIGHLIGHT_THICKNESS = 40;
 export const DEFAULT_SETTINGS_EXPANDED = false;
 export const DEFAULT_SINGLE_TOKEN_ZOOM = 0.5;
 export const MIN_SINGLE_TOKEN_ZOOM = 0.1;
@@ -36,7 +39,6 @@ export const MAX_RECENT_REQUEST_IDS = 100;
 
 export const HIGHLIGHT_METADATA_KEY = `${EXTENSION_NAMESPACE}/highlight`;
 export const HIGHLIGHT_COLOR = "#fa5300";
-export const HIGHLIGHT_STROKE_WIDTH = 12;
 export const HIGHLIGHT_INITIAL_SCALE = 20;
 export const HIGHLIGHT_SHRINK_MS = 3_000;
 export const HIGHLIGHT_FADE_MS = 2_000;

@@ -222,6 +222,15 @@ describe("highlight geometry", () => {
     ]);
   });
 
+  it("uses the requested highlight thickness", async () => {
+    await showHighlights([character], true, "#123456", 24);
+    expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
+      expect.objectContaining({
+        style: expect.objectContaining({ strokeWidth: 24 }),
+      }),
+    ]);
+  });
+
   it("creates and animates one local highlight for every target", async () => {
     const secondCharacter = {
       ...character,

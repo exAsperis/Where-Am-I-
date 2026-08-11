@@ -406,6 +406,7 @@ export class BackgroundController {
               settings.singleTokenZoom,
               settings.highlightEnabled,
               highlightColor,
+              settings.highlightThickness,
             )
           : await focusViewportOnPlayerCharacters(
               this.#playerId,
@@ -413,6 +414,7 @@ export class BackgroundController {
               settings.highlightEnabled,
               undefined,
               highlightColor,
+              settings.highlightThickness,
             );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
@@ -465,6 +467,7 @@ export class BackgroundController {
             settings.highlightEnabled,
             decision.routed.command.targetCharacterId,
             highlightColor,
+            settings.highlightThickness,
           );
         } else {
           const command = decision.routed.command;
@@ -477,6 +480,7 @@ export class BackgroundController {
               command.targetCharacterIds,
               highlightColor,
               command.requireVisible,
+              settings.highlightThickness,
             );
           } else if (command.targetMode === "ALL_ITEMS") {
             result = await focusViewportOnItems(
@@ -485,12 +489,14 @@ export class BackgroundController {
               settings.highlightEnabled,
               highlightColor,
               command.requireVisible,
+              settings.highlightThickness,
             );
           } else if (command.action === "HIGHLIGHT") {
             result = await highlightCharacterItems(
               command.targetCharacterIds,
               command.includeHidden,
               highlightColor,
+              settings.highlightThickness,
             );
           } else {
             result = await focusViewportOnCharacterItems(
@@ -499,6 +505,7 @@ export class BackgroundController {
               settings.highlightEnabled,
               command.includeHidden,
               highlightColor,
+              settings.highlightThickness,
             );
           }
           const toast = formatTargetActionToast(command);

@@ -30,6 +30,7 @@ import {
   setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerHighlightThickness,
   setPlayerHighlightColor,
   setPlayerSettingsExpanded,
   setRoomHighlightColor,
@@ -58,6 +59,7 @@ describe("metadata settings", () => {
       gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -68,6 +70,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -91,6 +94,7 @@ describe("metadata settings", () => {
       gmAutoFocusEnabled: false,
       singleTokenZoom: 1,
       highlightEnabled: true,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -105,6 +109,7 @@ describe("metadata settings", () => {
       gmAutoFocusEnabled: false,
       singleTokenZoom: 0.5,
       highlightEnabled: true,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -149,6 +154,12 @@ describe("metadata settings", () => {
     expect(readPlayerSettings({}).gmAutoFocusEnabled).toBe(false);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
     expect(readPlayerSettings({}).highlightEnabled).toBe(true);
+    expect(readPlayerSettings({}).highlightThickness).toBe(12);
+    expect(
+      readPlayerSettings({
+        [PLAYER_SETTINGS_METADATA_KEY]: { highlightThickness: 100 },
+      }).highlightThickness,
+    ).toBe(40);
     expect(readPlayerSettings({}).settingsExpanded).toBe(false);
     expect(
       readPlayerSettings({
@@ -183,6 +194,7 @@ describe("metadata settings", () => {
       gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -201,6 +213,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -214,6 +227,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -228,6 +242,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 1,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -242,6 +257,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: true,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -256,6 +272,7 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: true,
@@ -270,11 +287,19 @@ describe("metadata settings", () => {
         gmAutoFocusEnabled: true,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
         targetIndicatorEnabled: false,
       },
+    });
+
+    await setPlayerHighlightThickness(24);
+    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
+      [PLAYER_SETTINGS_METADATA_KEY]: expect.objectContaining({
+        highlightThickness: 24,
+      }),
     });
   });
 

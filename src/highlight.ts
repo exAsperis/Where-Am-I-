@@ -12,7 +12,7 @@ import {
   HIGHLIGHT_INITIAL_SCALE,
   HIGHLIGHT_METADATA_KEY,
   HIGHLIGHT_SHRINK_MS,
-  HIGHLIGHT_STROKE_WIDTH,
+  DEFAULT_HIGHLIGHT_THICKNESS,
 } from "./constants";
 
 export interface HighlightGeometry {
@@ -157,6 +157,7 @@ export async function showHighlights(
   items: readonly Item[],
   enabled: boolean,
   color = HIGHLIGHT_COLOR,
+  thickness = DEFAULT_HIGHLIGHT_THICKNESS,
 ): Promise<void> {
   await clearHighlights();
   if (!enabled || items.length === 0) {
@@ -191,7 +192,7 @@ export async function showHighlights(
         .fillOpacity(0)
         .strokeColor(color)
         .strokeOpacity(1)
-        .strokeWidth(HIGHLIGHT_STROKE_WIDTH)
+        .strokeWidth(thickness)
         .locked(true)
         .disableHit(true)
         .disableAutoZIndex(true)

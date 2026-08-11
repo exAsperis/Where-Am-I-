@@ -5,6 +5,9 @@ import {
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
   HIGHLIGHT_COLOR,
+  DEFAULT_HIGHLIGHT_THICKNESS,
+  MAX_HIGHLIGHT_THICKNESS,
+  MIN_HIGHLIGHT_THICKNESS,
   PLAYER_POPOVER_MAX_HEIGHT,
   PLAYER_POPOVER_MIN_HEIGHT,
   POPOVER_WIDTH,
@@ -32,6 +35,7 @@ import {
 import {
   getPlayerSettings,
   getRoomSettings,
+  normalizeHighlightThickness,
   readPlayerSettings,
   readRoomSettings,
   setGlobalEnabled,
@@ -39,6 +43,7 @@ import {
   setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerHighlightThickness,
   setPlayerSettingsExpanded,
   setPlayerHighlightColor,
   setRoomHighlightColor,
@@ -90,6 +95,7 @@ class PopoverController {
   #gmAutoFocusEnabled = false;
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
+  #highlightThickness = DEFAULT_HIGHLIGHT_THICKNESS;
   #settingsExpanded = false;
   #roomSettingsExpanded = readDisclosurePreference(ROOM_SETTINGS_EXPANDED_KEY);
   #mySettingsExpanded = readDisclosurePreference(MY_SETTINGS_EXPANDED_KEY);
@@ -166,6 +172,7 @@ class PopoverController {
       this.#gmAutoFocusEnabled = playerSettings.gmAutoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
+      this.#highlightThickness = playerSettings.highlightThickness;
       this.#settingsExpanded = playerSettings.settingsExpanded;
       this.#playerHighlightColorMode = playerSettings.highlightColorMode;
       this.#playerHighlightColor = playerSettings.highlightColor;
@@ -201,6 +208,7 @@ class PopoverController {
           this.#gmAutoFocusEnabled = settings.gmAutoFocusEnabled;
           this.#singleTokenZoom = settings.singleTokenZoom;
           this.#highlightEnabled = settings.highlightEnabled;
+          this.#highlightThickness = settings.highlightThickness;
           this.#settingsExpanded = settings.settingsExpanded;
           this.#playerHighlightColorMode = settings.highlightColorMode;
           this.#playerHighlightColor = settings.highlightColor;
@@ -415,6 +423,7 @@ class PopoverController {
       this.#createSettingsSection(
         this.#createZoomField(),
         this.#createHighlightToggle(),
+        this.#createHighlightThicknessField(),
         this.#createHighlightColorField(),
         toggle,
       ),
@@ -530,6 +539,7 @@ class PopoverController {
           this.#createZoomField(),
           gmAutoFocusToggle,
           this.#createHighlightToggle(),
+          this.#createHighlightThicknessField(),
         ),
       ),
     );
@@ -1167,6 +1177,40 @@ class PopoverController {
     return field;
   }
 
+  #createHighlightThicknessField(): HTMLElement {
+    const field = document.createElement("div");
+    field.className = "setting-field";
+    const value = document.createElement("span");
+    value.className = "zoom-value";
+    const input = document.createElement("input");
+    input.id = "highlight-thickness";
+    input.type = "number";
+    input.min = String(MIN_HIGHLIGHT_THICKNESS);
+    input.max = String(MAX_HIGHLIGHT_THICKNESS);
+    input.step = "1";
+    input.inputMode = "numeric";
+    input.value = String(this.#highlightThickness);
+    input.disabled = this.#busyAction !== undefined;
+    input.setAttribute("aria-describedby", "highlight-thickness-unit");
+    input.addEventListener("change", () => {
+      const thickness = normalizeHighlightThickness(Number(input.value));
+      void this.#updateHighlightThickness(thickness);
+    });
+    const unit = document.createElement("span");
+    unit.id = "highlight-thickness-unit";
+    unit.textContent = "px";
+    value.append(input, unit);
+    field.append(
+      this.#createSettingLabel(
+        "Highlight thickness",
+        "Sets the thickness of highlight rings shown on this client.",
+        input.id,
+      ),
+      value,
+    );
+    return field;
+  }
+
   #createHighlightToggle(): HTMLElement {
     return this.#createToggle(
       "Show highlights",
@@ -1369,6 +1413,17 @@ class PopoverController {
     });
   }
 
+  async #updateHighlightThickness(thickness: number): Promise<void> {
+    await this.#runAction("highlight-thickness-setting", async () => {
+      await setPlayerHighlightThickness(thickness);
+      this.#highlightThickness = thickness;
+      this.#status = {
+        message: "Highlight thickness saved.",
+        tone: "success",
+      };
+    });
+  }
+
   #getEffectiveHighlightColor(): string {
     if (this.#role === "GM") {
       return this.#roomHighlightColorMode === "CUSTOM"
@@ -1419,6 +1474,7 @@ class PopoverController {
           this.#highlightEnabled,
           undefined,
           this.#getEffectiveHighlightColor(),
+          this.#highlightThickness,
         ),
       );
     });
@@ -1436,6 +1492,7 @@ class PopoverController {
           this.#highlightEnabled,
           false,
           this.#getEffectiveHighlightColor(),
+          this.#highlightThickness,
         ),
       );
     });
@@ -1518,6 +1575,7 @@ class PopoverController {
               targets,
               includeHidden,
               this.#getEffectiveHighlightColor(),
+              this.#highlightThickness,
             )
           : await focusViewportOnCharacterItems(
               targets,
@@ -1525,6 +1583,7 @@ class PopoverController {
               this.#highlightEnabled,
               includeHidden,
               this.#getEffectiveHighlightColor(),
+              this.#highlightThickness,
             );
       this.#setTargetActionStatus(result, action);
     });

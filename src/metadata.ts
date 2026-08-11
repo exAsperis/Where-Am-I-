@@ -7,9 +7,12 @@ import {
   DEFAULT_GM_AUTO_FOCUS_ENABLED,
   DEFAULT_SINGLE_TOKEN_ZOOM,
   DEFAULT_HIGHLIGHT_ENABLED,
+  DEFAULT_HIGHLIGHT_THICKNESS,
   DEFAULT_SETTINGS_EXPANDED,
   GM_HIGHLIGHT_SETTINGS_METADATA_KEY,
   HIGHLIGHT_COLOR,
+  MAX_HIGHLIGHT_THICKNESS,
+  MIN_HIGHLIGHT_THICKNESS,
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
@@ -22,6 +25,7 @@ export interface PlayerSettings {
   gmAutoFocusEnabled: boolean;
   singleTokenZoom: number;
   highlightEnabled: boolean;
+  highlightThickness: number;
   settingsExpanded: boolean;
   highlightColorMode: "DEFAULT" | "CUSTOM";
   highlightColor: string;
@@ -61,6 +65,15 @@ function readColor(value: unknown): string {
 
 function readColorMode(value: unknown): "DEFAULT" | "CUSTOM" {
   return value === "CUSTOM" ? "CUSTOM" : "DEFAULT";
+}
+
+export function normalizeHighlightThickness(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(
+        MAX_HIGHLIGHT_THICKNESS,
+        Math.max(MIN_HIGHLIGHT_THICKNESS, Math.round(value)),
+      )
+    : DEFAULT_HIGHLIGHT_THICKNESS;
 }
 
 function readBooleanSetting(
@@ -106,6 +119,9 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
         : typeof settings.targetIndicatorEnabled === "boolean"
           ? settings.targetIndicatorEnabled
           : DEFAULT_HIGHLIGHT_ENABLED,
+    highlightThickness: normalizeHighlightThickness(
+      settings.highlightThickness,
+    ),
     settingsExpanded:
       typeof settings.settingsExpanded === "boolean"
         ? settings.settingsExpanded
@@ -171,6 +187,9 @@ export async function updatePlayerSettings(
       singleTokenZoom: normalizeZoomScale(
         update.singleTokenZoom ?? current.singleTokenZoom,
       ),
+      highlightThickness: normalizeHighlightThickness(
+        update.highlightThickness ?? current.highlightThickness,
+      ),
     },
   });
 }
@@ -197,6 +216,14 @@ export async function setPlayerHighlightEnabled(
   highlightEnabled: boolean,
 ): Promise<void> {
   await updatePlayerSettings({ highlightEnabled });
+}
+
+export async function setPlayerHighlightThickness(
+  highlightThickness: number,
+): Promise<void> {
+  await updatePlayerSettings({
+    highlightThickness: normalizeHighlightThickness(highlightThickness),
+  });
 }
 
 export async function setPlayerSettingsExpanded(

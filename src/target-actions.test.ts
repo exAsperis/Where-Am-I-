@@ -105,6 +105,7 @@ describe("viewport focus service", () => {
       [expect.objectContaining({ id: "one" })],
       true,
       undefined,
+      undefined,
     );
   });
 
@@ -177,6 +178,7 @@ describe("viewport focus service", () => {
       [expect.objectContaining({ id: "one" })],
       true,
       "#123456",
+      undefined,
     );
     expect(sdk.scene.items.getItemBounds).toHaveBeenCalledWith(["one"]);
     expect(sdk.viewport.getWidth).toHaveBeenCalled();

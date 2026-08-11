@@ -39,7 +39,7 @@ Owlbear Rodeo extension bar.
 - If you own several visible characters, **My characters** lets you focus one
   named token at a time.
 
-Your automatic-focus, zoom, and highlight settings are saved to your
+Your automatic-focus, zoom, highlight visibility, thickness, and color settings are saved to your
 Owlbear Rodeo player metadata.
 
 ### GM controls
@@ -76,7 +76,7 @@ or collapsed:
 | ![GM panel with Settings expanded](screenshots/wai-gm-panel-all-expanded.jpg) | ![GM panel with Settings collapsed](screenshots/wai-gm-panel-settings-collapsed.jpg) | ![Player panel with Settings expanded](screenshots/wai-player-panel-settings-explanded.jpg) |
 
 The GM player list uses Owlbear player names. GM-local actions use the GM's own
-saved zoom and highlight settings, while remotely focused players use
+saved zoom and highlight settings (including ring thickness), while remotely focused players use
 their own settings. The panel grows to fit additional rows up to its maximum
 height, then scrolls for larger parties.
 
