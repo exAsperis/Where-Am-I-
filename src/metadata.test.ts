@@ -157,9 +157,9 @@ describe("metadata settings", () => {
     expect(readPlayerSettings({}).highlightThickness).toBe(12);
     expect(
       readPlayerSettings({
-        [PLAYER_SETTINGS_METADATA_KEY]: { highlightThickness: 100 },
+        [PLAYER_SETTINGS_METADATA_KEY]: { highlightThickness: 101 },
       }).highlightThickness,
-    ).toBe(40);
+    ).toBe(100);
     expect(readPlayerSettings({}).settingsExpanded).toBe(false);
     expect(
       readPlayerSettings({
