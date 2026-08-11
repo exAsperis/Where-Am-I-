@@ -2,6 +2,7 @@ export const EXTENSION_NAMESPACE = "com.ex-asperis.whereami";
 export const LEGACY_EXTENSION_NAMESPACE = "io.github.exasperis.where-am-i";
 
 export const PLAYER_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/player-settings`;
+export const PLAYER_SETTINGS_STORAGE_KEY = `${EXTENSION_NAMESPACE}/player-settings`;
 export const ROOM_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/room-settings`;
 export const GM_HIGHLIGHT_SETTINGS_METADATA_KEY =
   "com.ex-asperis.where-am-i/highlight-settings";

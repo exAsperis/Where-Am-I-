@@ -36,7 +36,6 @@ import {
   getPlayerSettings,
   getRoomSettings,
   normalizeHighlightThickness,
-  readPlayerSettings,
   readRoomSettings,
   setGlobalEnabled,
   setPlayerAutoFocusEnabled,
@@ -200,18 +199,6 @@ class PopoverController {
               tone: "warning",
             };
           }
-          this.#render();
-        }),
-        OBR.player.onChange((player) => {
-          const settings = readPlayerSettings(player.metadata);
-          this.#autoFocusEnabled = settings.autoFocusEnabled;
-          this.#gmAutoFocusEnabled = settings.gmAutoFocusEnabled;
-          this.#singleTokenZoom = settings.singleTokenZoom;
-          this.#highlightEnabled = settings.highlightEnabled;
-          this.#highlightThickness = settings.highlightThickness;
-          this.#settingsExpanded = settings.settingsExpanded;
-          this.#playerHighlightColorMode = settings.highlightColorMode;
-          this.#playerHighlightColor = settings.highlightColor;
           this.#render();
         }),
       );

@@ -18,8 +18,9 @@ identifier.
 - Migrate valid legacy player and room settings when the new key is absent,
   writing `null` to the legacy key after a successful copy. Only a GM migrates
   room metadata; players can continue reading legacy room settings until then.
-- Keep player and GM personal preferences in player metadata and global
-  enablement in room metadata so settings remain room-persistent.
+- Keep global enablement in room metadata. Personal-preference persistence is
+  superseded by decision 0008 because player metadata lasts only for the live
+  connection.
 - Render Character-layer rows with token artwork, optional token-associated
   text, and the character item name.
 - Give GMs a collapsed scene-wide Character-token list with local focus,
