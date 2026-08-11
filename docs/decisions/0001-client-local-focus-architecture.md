@@ -22,6 +22,7 @@ authorized using the sending Owlbear connection.
   by both entry points.
 - Store `{ autoFocusEnabled }` in namespaced player metadata and
   `{ globalEnabled }` in namespaced room metadata. Both default to `true`.
+  Decision 0008 supersedes the personal-preference storage location.
 - Send remote focus requests over one namespaced Owlbear broadcast channel,
   targeted by stable player ID and carrying a unique request ID plus timestamp.
 - On every receiving player connection, require a current connected GM whose

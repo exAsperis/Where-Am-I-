@@ -11,6 +11,7 @@ Multi-item focus must also honor the same zoom limit as a single character.
 ## Decision
 
 - Store each player's Default or Custom color choice in player metadata.
+  Decision 0008 supersedes the personal-preference storage location.
 - Store the shared GM Default or Custom color choice in room metadata under
   `com.ex-asperis.where-am-i/highlight-settings`, so every GM edits the same
   room setting without changing the legacy metadata namespace.

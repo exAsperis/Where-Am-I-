@@ -39,8 +39,8 @@ Owlbear Rodeo extension bar.
 - If you own several visible characters, **My characters** lets you focus one
   named token at a time.
 
-Your automatic-focus, zoom, and highlight settings are saved to your
-Owlbear Rodeo player metadata.
+Your automatic-focus, zoom, and highlight settings are saved locally in this
+browser for your Owlbear Rodeo player ID.
 
 ### GM controls
 
@@ -108,8 +108,9 @@ setting. A successful remote action also shows each affected player a concise
 toast naming the GM, action, and selected target.
 
 The extension has no backend, accounts, analytics, or external data storage.
-Preferences use namespaced Owlbear Rodeo player metadata, global enablement
-uses room metadata, and GM focus requests use Owlbear Rodeo broadcasts.
+Preferences use browser-local storage namespaced by Owlbear Rodeo player ID,
+global enablement uses room metadata, and GM focus requests use Owlbear Rodeo
+broadcasts.
 
 ### Support
 

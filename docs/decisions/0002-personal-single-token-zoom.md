@@ -17,6 +17,7 @@ existing all-owned-characters action.
 
 - Store `singleTokenZoom` beside `autoFocusEnabled` in the existing namespaced
   player metadata object. It defaults to `0.5` and is constrained to `0.1–2`.
+  Decision 0008 supersedes the personal-preference storage location.
 - When exactly one character is targeted, construct viewport-sized scene bounds
   centered on the token at the preferred scale and animate to those bounds.
 - Continue using padded combined item bounds whenever multiple characters are

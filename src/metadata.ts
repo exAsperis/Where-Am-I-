@@ -12,6 +12,7 @@ import {
   LEGACY_PLAYER_SETTINGS_METADATA_KEY,
   LEGACY_ROOM_SETTINGS_METADATA_KEY,
   PLAYER_SETTINGS_METADATA_KEY,
+  PLAYER_SETTINGS_STORAGE_KEY,
   ROOM_SETTINGS_METADATA_KEY,
 } from "./constants";
 import { normalizeZoomScale } from "./domain";
@@ -34,17 +35,6 @@ export interface RoomSettings {
 
 function isSettingsObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isValidLegacyPlayerSettings(value: unknown): boolean {
-  if (!isSettingsObject(value)) {
-    return false;
-  }
-  return (
-    typeof value.autoFocusEnabled === "boolean" ||
-    typeof value.targetIndicatorEnabled === "boolean" ||
-    typeof value.singleTokenZoom === "number"
-  );
 }
 
 function isValidLegacyRoomSettings(value: unknown): boolean {
@@ -109,6 +99,32 @@ export function readPlayerSettings(metadata: Metadata): PlayerSettings {
   };
 }
 
+function getPlayerSettingsStorageKey(): string {
+  return `${PLAYER_SETTINGS_STORAGE_KEY}/${OBR.player.id}`;
+}
+
+function readStoredPlayerSettings(): PlayerSettings | undefined {
+  try {
+    const value = globalThis.localStorage.getItem(
+      getPlayerSettingsStorageKey(),
+    );
+    if (value === null) return undefined;
+    const parsed: unknown = JSON.parse(value);
+    return isSettingsObject(parsed)
+      ? readPlayerSettings({ [PLAYER_SETTINGS_METADATA_KEY]: parsed })
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredPlayerSettings(settings: PlayerSettings): void {
+  globalThis.localStorage.setItem(
+    getPlayerSettingsStorageKey(),
+    JSON.stringify(settings),
+  );
+}
+
 export function readRoomSettings(metadata: Metadata): RoomSettings {
   const key =
     metadata[ROOM_SETTINGS_METADATA_KEY] == null
@@ -135,19 +151,16 @@ export function readRoomSettings(metadata: Metadata): RoomSettings {
 }
 
 export async function getPlayerSettings(): Promise<PlayerSettings> {
+  const storedSettings = readStoredPlayerSettings();
+  if (storedSettings) return storedSettings;
+
   const metadata = await OBR.player.getMetadata();
   const settings = readPlayerSettings(metadata);
-  if (
-    metadata[PLAYER_SETTINGS_METADATA_KEY] == null &&
-    isValidLegacyPlayerSettings(metadata[LEGACY_PLAYER_SETTINGS_METADATA_KEY])
-  ) {
-    await OBR.player.setMetadata({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        ...settings,
-        targetIndicatorEnabled: settings.highlightEnabled,
-      },
-      [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
-    });
+  try {
+    writeStoredPlayerSettings(settings);
+  } catch {
+    // Storage can be unavailable in privacy-restricted browsers. The live
+    // player metadata remains a session-scoped fallback in that case.
   }
   return settings;
 }
@@ -156,17 +169,14 @@ export async function updatePlayerSettings(
   update: Partial<PlayerSettings>,
 ): Promise<void> {
   const current = await getPlayerSettings();
-  await OBR.player.setMetadata({
-    [PLAYER_SETTINGS_METADATA_KEY]: {
-      ...current,
-      ...update,
-      targetIndicatorEnabled:
-        update.highlightEnabled ?? current.highlightEnabled,
-      singleTokenZoom: normalizeZoomScale(
-        update.singleTokenZoom ?? current.singleTokenZoom,
-      ),
-    },
-  });
+  const next = {
+    ...current,
+    ...update,
+    singleTokenZoom: normalizeZoomScale(
+      update.singleTokenZoom ?? current.singleTokenZoom,
+    ),
+  };
+  writeStoredPlayerSettings(next);
 }
 
 export async function setPlayerAutoFocusEnabled(

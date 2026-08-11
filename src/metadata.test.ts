@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sdk = vi.hoisted(() => ({
   player: {
+    id: "player-1",
     getMetadata: vi.fn(),
     getRole: vi.fn(),
     setMetadata: vi.fn(),
@@ -11,6 +12,21 @@ const sdk = vi.hoisted(() => ({
     setMetadata: vi.fn(),
   },
 }));
+
+const storedValues = new Map<string, string>();
+const localStorage = {
+  getItem: vi.fn((key: string) => storedValues.get(key) ?? null),
+  setItem: vi.fn((key: string, value: string) => {
+    storedValues.set(key, value);
+  }),
+};
+vi.stubGlobal("localStorage", localStorage);
+
+function storedPlayerSettings(): Record<string, unknown> {
+  const value = [...storedValues.values()][0];
+  if (!value) throw new Error("Expected stored player settings.");
+  return JSON.parse(value) as Record<string, unknown>;
+}
 
 vi.mock("@owlbear-rodeo/sdk", () => ({ default: sdk }));
 
@@ -39,12 +55,13 @@ import {
 describe("metadata settings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    storedValues.clear();
     sdk.player.setMetadata.mockResolvedValue(undefined);
     sdk.room.setMetadata.mockResolvedValue(undefined);
     sdk.player.getRole.mockResolvedValue("GM");
   });
 
-  it("copies and clears legacy player settings when the new key is absent", async () => {
+  it("imports legacy player settings into persistent browser storage", async () => {
     sdk.player.getMetadata.mockResolvedValue({
       [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: false,
@@ -60,17 +77,13 @@ describe("metadata settings", () => {
       highlightColor: "#fa5300",
       settingsExpanded: false,
     });
-    expect(sdk.player.setMetadata).toHaveBeenCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        autoFocusEnabled: false,
-        singleTokenZoom: 0.75,
-        highlightEnabled: false,
-        highlightColorMode: "DEFAULT",
-        highlightColor: "#fa5300",
-        settingsExpanded: false,
-        targetIndicatorEnabled: false,
-      },
-      [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: null,
+    expect(storedPlayerSettings()).toEqual({
+      autoFocusEnabled: false,
+      singleTokenZoom: 0.75,
+      highlightEnabled: false,
+      highlightColorMode: "DEFAULT",
+      highlightColor: "#fa5300",
+      settingsExpanded: false,
     });
   });
 
@@ -93,6 +106,7 @@ describe("metadata settings", () => {
     });
     expect(sdk.player.setMetadata).not.toHaveBeenCalled();
 
+    storedValues.clear();
     sdk.player.getMetadata.mockResolvedValue({
       [LEGACY_PLAYER_SETTINGS_METADATA_KEY]: { unexpected: true },
     });
@@ -187,7 +201,7 @@ describe("metadata settings", () => {
     ).toBe(false);
   });
 
-  it("preserves all personal settings when either preference changes", async () => {
+  it("persists and preserves all personal settings across reads", async () => {
     sdk.player.getMetadata.mockResolvedValue({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
@@ -200,56 +214,36 @@ describe("metadata settings", () => {
     });
 
     await setPlayerAutoFocusEnabled(false);
-    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        autoFocusEnabled: false,
-        singleTokenZoom: 0.75,
-        highlightEnabled: false,
-        highlightColorMode: "DEFAULT",
-        highlightColor: "#fa5300",
-        settingsExpanded: false,
-        targetIndicatorEnabled: false,
-      },
+    expect(storedPlayerSettings()).toMatchObject({
+      autoFocusEnabled: false,
+      singleTokenZoom: 0.75,
     });
 
     await setPlayerSingleTokenZoom(1);
-    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        autoFocusEnabled: true,
-        singleTokenZoom: 1,
-        highlightEnabled: false,
-        highlightColorMode: "DEFAULT",
-        highlightColor: "#fa5300",
-        settingsExpanded: false,
-        targetIndicatorEnabled: false,
-      },
+    expect(storedPlayerSettings()).toMatchObject({
+      autoFocusEnabled: false,
+      singleTokenZoom: 1,
     });
 
     await setPlayerHighlightEnabled(true);
-    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        autoFocusEnabled: true,
-        singleTokenZoom: 0.75,
-        highlightEnabled: true,
-        highlightColorMode: "DEFAULT",
-        highlightColor: "#fa5300",
-        settingsExpanded: false,
-        targetIndicatorEnabled: true,
-      },
+    expect(storedPlayerSettings()).toMatchObject({
+      autoFocusEnabled: false,
+      singleTokenZoom: 1,
+      highlightEnabled: true,
     });
 
     await setPlayerSettingsExpanded(true);
-    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: {
-        autoFocusEnabled: true,
-        singleTokenZoom: 0.75,
-        highlightEnabled: false,
-        highlightColorMode: "DEFAULT",
-        highlightColor: "#fa5300",
-        settingsExpanded: true,
-        targetIndicatorEnabled: false,
-      },
+    expect(storedPlayerSettings()).toMatchObject({
+      highlightEnabled: true,
+      settingsExpanded: true,
     });
+    await expect(getPlayerSettings()).resolves.toMatchObject({
+      autoFocusEnabled: false,
+      singleTokenZoom: 1,
+      highlightEnabled: true,
+      settingsExpanded: true,
+    });
+    expect(sdk.player.getMetadata).toHaveBeenCalledTimes(1);
   });
 
   it("persists the GM Move here preference without changing global enablement", async () => {
@@ -273,11 +267,9 @@ describe("metadata settings", () => {
   it("persists custom colors and resolves player defaults through the GM room color", async () => {
     sdk.player.getMetadata.mockResolvedValue({});
     await setPlayerHighlightColor("CUSTOM", "#12ABEF");
-    expect(sdk.player.setMetadata).toHaveBeenLastCalledWith({
-      [PLAYER_SETTINGS_METADATA_KEY]: expect.objectContaining({
-        highlightColorMode: "CUSTOM",
-        highlightColor: "#12abef",
-      }),
+    expect(storedPlayerSettings()).toMatchObject({
+      highlightColorMode: "CUSTOM",
+      highlightColor: "#12abef",
     });
 
     await setRoomHighlightColor("CUSTOM", "#654321");
