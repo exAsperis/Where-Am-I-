@@ -196,8 +196,8 @@ export async function showHighlights(
         .locked(true)
         .disableHit(true)
         .disableAutoZIndex(true)
-        .zIndex(1_000_000)
-        .layer("CONTROL")
+        .zIndex(item.zIndex - 1)
+        .layer(item.layer)
         .metadata({ [HIGHLIGHT_METADATA_KEY]: true })
         .build(),
     );

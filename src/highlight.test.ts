@@ -184,7 +184,9 @@ describe("highlight geometry", () => {
     expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
       expect.objectContaining({
         type: "SHAPE",
-        layer: "CONTROL",
+        layer: "CHARACTER",
+        disableAutoZIndex: true,
+        zIndex: -1,
         disableHit: true,
         position: { x: 60, y: 120 },
         width: 4_000,
