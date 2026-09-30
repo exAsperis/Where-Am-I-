@@ -38,7 +38,13 @@ const sdk = vi.hoisted(() => ({
         };
       }),
       updateItems: vi.fn(
-        async (ids: string[], update: (items: Item[]) => void) => {
+        async (
+          itemsOrIds: Item[] | string[],
+          update: (items: Item[]) => void,
+        ) => {
+          const ids = itemsOrIds.map((itemOrId) =>
+            typeof itemOrId === "string" ? itemOrId : itemOrId.id,
+          );
           update(state.items.filter((item) => ids.includes(item.id)));
         },
       ),
@@ -121,6 +127,7 @@ describe("Player Play Area runtime", () => {
   it("hydrates without relocating existing Characters", async () => {
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
+    expect(state.boundsCalls).toBe(1);
     await settle();
     expect(sdk.scene.items.updateItems).not.toHaveBeenCalled();
     enforcer.dispose();
@@ -208,6 +215,7 @@ describe("Player Play Area runtime", () => {
     state.items = [character("hero", 50)];
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
+    expect(state.boundsCalls).toBe(1);
     state.items[0] = character("hero", 120);
     enforcer.enqueue([...state.items]);
     await vi.waitFor(() => expect(state.boundsCalls).toBe(1));
@@ -232,15 +240,16 @@ describe("Player Play Area runtime", () => {
     state.items = [character("hero", 50)];
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
+    state.boundsCalls = 0;
     let releaseBounds = (): void => undefined;
     state.boundsGate = new Promise<void>((resolve) => {
       releaseBounds = resolve;
     });
-    state.items[0] = character("hero", 120);
+    state.items[0] = character("hero", 120, "player", 2);
     enforcer.enqueue([...state.items]);
-    state.items[0] = character("hero", 130);
+    state.items[0] = character("hero", 130, "player", 2);
     enforcer.enqueue([...state.items]);
-    state.items[0] = character("hero", 140);
+    state.items[0] = character("hero", 140, "player", 2);
     enforcer.enqueue([...state.items]);
     releaseBounds();
     state.boundsGate = undefined;

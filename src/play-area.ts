@@ -144,6 +144,8 @@ export class PlayerPlayAreaEnforcer {
     if (this.#disposed || generation !== this.#generation) return;
     this.#settings = readPlayAreaSettings(metadata);
     this.#replaceBaseline(items);
+    await this.#warmGeometry(items, generation);
+    if (this.#disposed || generation !== this.#generation) return;
     this.#hydrated = true;
   }
 
@@ -188,6 +190,8 @@ export class PlayerPlayAreaEnforcer {
       const items = await OBR.scene.items.getItems();
       if (this.#disposed || generation !== this.#generation) return;
       this.#replaceBaseline(items);
+      await this.#warmGeometry(items, generation);
+      if (this.#disposed || generation !== this.#generation) return;
       this.#hydrated = true;
     } catch (error) {
       console.error(
@@ -202,6 +206,24 @@ export class PlayerPlayAreaEnforcer {
     for (const item of items) {
       if (isCharacter(item)) this.#baseline.set(item.id, item);
     }
+  }
+
+  async #warmGeometry(
+    items: readonly Item[],
+    generation: number,
+  ): Promise<void> {
+    if (!this.#globalEnabled || !this.#settings?.enabled) return;
+    const characters = items.filter(isCharacter);
+    await Promise.all(
+      characters.map(async (item) => {
+        const bounds = await OBR.scene.items.getItemBounds([item.id]);
+        if (this.#disposed || generation !== this.#generation) return;
+        this.#geometry.set(item.id, {
+          signature: geometrySignature(item),
+          offsets: getBoundsOffsets(item.position, bounds),
+        });
+      }),
+    );
   }
 
   #clearTransientState(clearBaseline = true): void {
@@ -320,7 +342,7 @@ export class PlayerPlayAreaEnforcer {
       this.#recoveryIds.add(correction.id);
     }
     await OBR.scene.items.updateItems(
-      corrections.map((correction) => correction.id),
+      positioned.map(({ item }) => item),
       (drafts) => {
         for (const draft of drafts) {
           const correction = corrections.find((value) => value.id === draft.id);

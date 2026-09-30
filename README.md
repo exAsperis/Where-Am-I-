@@ -75,10 +75,20 @@ moving, resizing, hiding, or deleting them does not change the saved area.
 
 GM Settings shows whether a Play Area is configured, enables or disables
 **Keep player characters inside Play Area**, and can clear the saved area. When
-enabled, Characters added or moved by a player are live-clamped so their entire
+enabled, Characters added or moved by a player are corrected so their entire
 visible bounds remain inside the rectangle. GM movement remains unrestricted.
 Owlbear does not expose whether a player-authored position write came from a
 native drag or another extension, so both are constrained consistently.
+
+Owlbear publishes native movement updates while a token is being dragged, and
+Where am I? calculates and submits boundary corrections from that stream.
+However, testing confirms that Owlbear's native drag interaction continues to
+render the token under the pointer and does not display shared-item correction
+writes until the pointer is released. The token can therefore appear outside
+the Play Area during the drag, then settles at the nearest legal boundary on
+release. This differs from extensions such as Dynamic Fog, which use the live
+movement stream to update dependent local rendering rather than overriding the
+shared item currently controlled by Owlbear's native interaction.
 
 Existing Characters are not relocated merely because a scene or Play Area
 loads. After a correction settles, Where am I? leaves the viewport alone if the
@@ -282,7 +292,9 @@ connection:
     does not change.
 41. On a separate player client, drag slowly and quickly through every edge,
     hold the pointer far outside, slide along an edge, and drag diagonally into
-    a corner. Confirm nearest-edge clamping without ping-pong or jitter.
+    a corner. Owlbear currently keeps the native drag preview under the pointer;
+    confirm release settles the Character at the nearest legal boundary without
+    ping-pong, correction loops, or an incorrect final position.
 42. Drag multiple selected Characters into an edge and corner and confirm their
     relative formation is preserved. Drop a new Character far outside and, if
     supported, rapidly throw or flick one. Repeat with latency when practical.

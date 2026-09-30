@@ -154,3 +154,13 @@ unrestricted GM movement, no correction loop or notification spam, and recovery
 Focus only when the corrected Character is wholly outside the player's visible
 viewport. Record any visible fight between native dragging and correction; do
 not silently substitute a post-drop-only design.
+
+Observed local Owlbear result, 2026-09-30: shared scene item updates arrive
+during a native Character drag, and Where am I? submits legal positions from
+that stream, but the active native interaction continues rendering the
+Character under the pointer. Shared-item corrections become visible only when
+the pointer is released, at which point the Character settles at the nearest
+legal position. Dynamic Fog's live response is not evidence that a shared item
+can be visually overridden during its native drag: it updates dependent local
+rendering instead. Preserve the release-time correction and recovery safety net
+unless Owlbear exposes a supported native-drag constraint hook.
