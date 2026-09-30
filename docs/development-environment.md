@@ -97,6 +97,7 @@ For every public behavior change, update all of these together:
 
 - `package.json` version;
 - `public/manifest.json` version;
+- `public/manifest.local.json` version;
 - query version on the manifest popover URL;
 - query version on the manifest background URL;
 - query version on both manifest icon URLs;
@@ -141,3 +142,15 @@ Reloading Owlbear may reset the viewport. Before reload, record Position X, Posi
 Zoom last changes effective position, and setting Y can alter X. Close Players and Scene panels before visual comparisons.
 
 A screenshot cannot prove timing or synchronization. Observe behavior over time or record video. Multi-client behavior must be tested with the required signed-in clients; report unavailable cases as unverified. Multiple GM clients each run a background extension instance and can expose real coordination bugs, not harmless noise.
+
+### Player Play Area live-movement checks
+
+Use separate GM and player clients. Define the area through the GM item context
+menu, then test slow and fast drags through all edges, holding the pointer far
+outside, sliding along an edge, diagonal corner contact, multi-selection, new
+assets dropped far outside, and rapid throw/flick input when available. Repeat
+under noticeable latency if practical. Confirm whole-token containment,
+unrestricted GM movement, no correction loop or notification spam, and recovery
+Focus only when the corrected Character is wholly outside the player's visible
+viewport. Record any visible fight between native dragging and correction; do
+not silently substitute a post-drop-only design.

@@ -420,3 +420,151 @@ export function resolveEnablement(
 ): boolean {
   return globalEnabled && playerAutoFocusEnabled;
 }
+
+export interface AxisAlignedRect {
+  min: Vector2;
+  max: Vector2;
+}
+
+export interface ItemBoundsOffsets {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+export interface ClampPositionResult {
+  position: Vector2;
+  changed: boolean;
+  oversizedX: boolean;
+  oversizedY: boolean;
+}
+
+export function getBoundsOffsets(
+  position: Vector2,
+  bounds: Pick<BoundingBox, "min" | "max">,
+): ItemBoundsOffsets {
+  return {
+    left: bounds.min.x - position.x,
+    right: bounds.max.x - position.x,
+    top: bounds.min.y - position.y,
+    bottom: bounds.max.y - position.y,
+  };
+}
+
+function clampAxis(
+  value: number,
+  areaMin: number,
+  areaMax: number,
+  lowOffset: number,
+  highOffset: number,
+): { value: number; oversized: boolean } {
+  const minimum = areaMin - lowOffset;
+  const maximum = areaMax - highOffset;
+  if (minimum > maximum) {
+    return {
+      value: (areaMin + areaMax - lowOffset - highOffset) / 2,
+      oversized: true,
+    };
+  }
+  return {
+    value: Math.min(maximum, Math.max(minimum, value)),
+    oversized: false,
+  };
+}
+
+export function clampItemPosition(
+  position: Vector2,
+  offsets: ItemBoundsOffsets,
+  playArea: AxisAlignedRect,
+  epsilon = 0,
+): ClampPositionResult {
+  const x = clampAxis(
+    position.x,
+    playArea.min.x,
+    playArea.max.x,
+    offsets.left,
+    offsets.right,
+  );
+  const y = clampAxis(
+    position.y,
+    playArea.min.y,
+    playArea.max.y,
+    offsets.top,
+    offsets.bottom,
+  );
+  const corrected = { x: x.value, y: y.value };
+  return {
+    position: corrected,
+    changed:
+      Math.abs(corrected.x - position.x) > epsilon ||
+      Math.abs(corrected.y - position.y) > epsilon,
+    oversizedX: x.oversized,
+    oversizedY: y.oversized,
+  };
+}
+
+export interface PositionedBounds {
+  position: Vector2;
+  offsets: ItemBoundsOffsets;
+}
+
+export function clampItemGroup(
+  items: readonly PositionedBounds[],
+  playArea: AxisAlignedRect,
+  epsilon = 0,
+): {
+  delta: Vector2;
+  changed: boolean;
+  oversizedX: boolean;
+  oversizedY: boolean;
+} {
+  if (items.length === 0) {
+    return {
+      delta: { x: 0, y: 0 },
+      changed: false,
+      oversizedX: false,
+      oversizedY: false,
+    };
+  }
+  const bounds = items.reduce(
+    (result, item) => ({
+      min: {
+        x: Math.min(result.min.x, item.position.x + item.offsets.left),
+        y: Math.min(result.min.y, item.position.y + item.offsets.top),
+      },
+      max: {
+        x: Math.max(result.max.x, item.position.x + item.offsets.right),
+        y: Math.max(result.max.y, item.position.y + item.offsets.bottom),
+      },
+    }),
+    {
+      min: { x: Number.POSITIVE_INFINITY, y: Number.POSITIVE_INFINITY },
+      max: { x: Number.NEGATIVE_INFINITY, y: Number.NEGATIVE_INFINITY },
+    },
+  );
+  const offsets = {
+    left: bounds.min.x,
+    right: bounds.max.x,
+    top: bounds.min.y,
+    bottom: bounds.max.y,
+  };
+  const result = clampItemPosition({ x: 0, y: 0 }, offsets, playArea, epsilon);
+  return {
+    delta: result.position,
+    changed: result.changed,
+    oversizedX: result.oversizedX,
+    oversizedY: result.oversizedY,
+  };
+}
+
+export function positionsApproximatelyEqual(
+  left: Vector2,
+  right: Vector2,
+  epsilon: number,
+): boolean {
+  return (
+    Math.abs(left.x - right.x) <= epsilon &&
+    Math.abs(left.y - right.y) <= epsilon
+  );
+}

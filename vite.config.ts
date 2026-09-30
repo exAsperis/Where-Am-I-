@@ -9,6 +9,12 @@ if (!base.startsWith("/") || !base.endsWith("/")) {
 
 export default defineConfig({
   base,
+  server: {
+    cors: {
+      origin: "https://www.owlbear.rodeo",
+    },
+    strictPort: true,
+  },
   build: {
     rollupOptions: {
       input: {

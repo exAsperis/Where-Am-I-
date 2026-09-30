@@ -2,6 +2,9 @@ import { readFile } from "node:fs/promises";
 
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const manifest = JSON.parse(await readFile("public/manifest.json", "utf8"));
+const localManifest = JSON.parse(
+  await readFile("public/manifest.local.json", "utf8"),
+);
 const storeSource = await readFile("public/store.md", "utf8");
 const versionSource = await readFile("src/version.ts", "utf8");
 
@@ -27,6 +30,7 @@ if (!storeImageMatch || !storeIconMatch) {
 const versions = new Map([
   ["package.json", expected],
   ["public/manifest.json", manifest.version],
+  ["public/manifest.local.json", localManifest.version],
   [
     "manifest popover query",
     new URL(manifest.action.popover, "https://local").searchParams.get("v"),

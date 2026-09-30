@@ -9,6 +9,8 @@ import {
   CANCEL_HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
   PENDING_FOCUS_PARTY_ITEM_METADATA_KEY,
   PENDING_HIGHLIGHT_PARTY_ITEM_METADATA_KEY,
+  PLAY_AREA_METADATA_KEY,
+  SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID,
 } from "./constants";
 import {
   focusViewportOnItems,
@@ -46,6 +48,7 @@ import {
   removePendingPartyActions,
   synchronizePendingPartyMarkers,
 } from "./pending-actions";
+import { PlayerPlayAreaEnforcer, type PlayAreaSettings } from "./play-area";
 
 export class BackgroundController {
   readonly #disposeCallbacks: Array<() => void> = [];
@@ -59,6 +62,7 @@ export class BackgroundController {
   #gmConnectionId = "";
   #pendingInFlight = false;
   #pendingQueued = false;
+  #playAreaEnforcer: PlayerPlayAreaEnforcer | undefined;
 
   async start(): Promise<void> {
     const role = await OBR.player.getRole();
@@ -93,11 +97,19 @@ export class BackgroundController {
     this.#disposeCallbacks.push(
       OBR.room.onMetadataChange((metadata) => {
         this.#globalEnabled = readRoomSettings(metadata).globalEnabled;
+        this.#playAreaEnforcer?.setGlobalEnabled(this.#globalEnabled);
       }),
       OBR.scene.onReadyChange((ready) => {
+        void this.#playAreaEnforcer?.refreshScene();
         if (this.#readiness.observe(ready)) {
           void this.#runAutomaticFocus("scene change");
         }
+      }),
+      OBR.scene.onMetadataChange((metadata) => {
+        this.#playAreaEnforcer?.handleSceneMetadata(metadata);
+      }),
+      OBR.scene.items.onChange((items) => {
+        this.#playAreaEnforcer?.enqueue(items);
       }),
       OBR.broadcast.onMessage(
         TARGET_ACTION_BROADCAST_CHANNEL,
@@ -112,6 +124,9 @@ export class BackgroundController {
         },
       ),
     );
+
+    this.#playAreaEnforcer = new PlayerPlayAreaEnforcer(this.#playerId);
+    await this.#playAreaEnforcer.initialize(this.#globalEnabled);
 
     try {
       const ready = await OBR.scene.isReady();
@@ -218,7 +233,49 @@ export class BackgroundController {
         "HIGHLIGHT",
         PENDING_HIGHLIGHT_PARTY_ITEM_METADATA_KEY,
       ),
+      this.#createSetPlayAreaMenu(icon),
     ]);
+  }
+
+  async #createSetPlayAreaMenu(icon: string): Promise<void> {
+    const id = SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID;
+    await OBR.contextMenu.create({
+      id,
+      icons: [
+        {
+          icon,
+          label: "Set as Player Play Area",
+          filter: { roles: ["GM"], min: 1 },
+        },
+      ],
+      onClick: (context) => {
+        void this.#setPlayAreaFromItems(context.items.map((item) => item.id));
+      },
+    });
+    this.#disposeCallbacks.push(() => {
+      void OBR.contextMenu.remove(id);
+    });
+  }
+
+  async #setPlayAreaFromItems(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    try {
+      const bounds = await OBR.scene.items.getItemBounds(ids);
+      const settings: PlayAreaSettings = {
+        version: 1,
+        enabled: true,
+        min: { ...bounds.min },
+        max: { ...bounds.max },
+      };
+      await OBR.scene.setMetadata({ [PLAY_AREA_METADATA_KEY]: settings });
+      await OBR.notification.show("Player Play Area configured.", "INFO");
+    } catch (error) {
+      console.error("Where am I? could not set the Player Play Area.", error);
+      await OBR.notification.show(
+        "The Player Play Area could not be configured.",
+        "ERROR",
+      );
+    }
   }
 
   async #sendContextAction(
@@ -359,6 +416,7 @@ export class BackgroundController {
 
   dispose(): void {
     this.#disposed = true;
+    this.#playAreaEnforcer?.dispose();
     for (const dispose of this.#disposeCallbacks.splice(0)) {
       dispose();
     }

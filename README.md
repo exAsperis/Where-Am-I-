@@ -66,6 +66,25 @@ browser for your Owlbear Rodeo player ID.
 - **Highlight color** sets the shared room default for players. Its Default
   state is orange, and a Custom color is shared by all GMs.
 
+### Player Play Area
+
+A GM can select one or more scene items and choose **Set as Player Play Area**
+from the item context menu. Where am I? saves the union of those item bounds as
+a scene-specific rectangle. The source items are not linked afterward, so
+moving, resizing, hiding, or deleting them does not change the saved area.
+
+GM Settings shows whether a Play Area is configured, enables or disables
+**Keep player characters inside Play Area**, and can clear the saved area. When
+enabled, Characters added or moved by a player are live-clamped so their entire
+visible bounds remain inside the rectangle. GM movement remains unrestricted.
+Owlbear does not expose whether a player-authored position write came from a
+native drag or another extension, so both are constrained consistently.
+
+Existing Characters are not relocated merely because a scene or Play Area
+loads. After a correction settles, Where am I? leaves the viewport alone if the
+Character is visible; if it is wholly offscreen, it uses the existing Focus and
+Highlight behavior to help the player find it.
+
 ![Pending party highlights on hidden tokens, with cancellation controls](screenshots/wai-pending-highlight.jpg)
 
 The responsive panel keeps the same controls accessible with Settings expanded
@@ -134,6 +153,19 @@ pnpm run check
 pnpm run build
 ```
 
+For local Owlbear Rodeo testing, start Vite from a separate terminal:
+
+```sh
+pnpm run dev
+```
+
+Then add `http://localhost:5173/manifest.local.json` as a development extension
+in your Owlbear Rodeo profile and enable it in the test room. The local manifest
+uses the Vite-served `main.html` and `background.html`; the production manifest
+and hosted URLs remain unchanged. Vite only permits cross-origin development
+requests from `https://www.owlbear.rodeo`, and startup fails instead of silently
+choosing another port if 5173 is occupied.
+
 Codex Desktop contributors must follow
 [`docs/development-environment.md`](docs/development-environment.md), which
 documents the bundled toolchain, version synchronization, production base
@@ -148,7 +180,9 @@ $env:VITE_BASE_PATH = "/Where-Am-I-/"
 pnpm run build
 ```
 
-Do not use a local browser preview for Owlbear integration in this workspace.
+Codex must not start the local server or use its isolated browser for Owlbear
+integration in this workspace; a developer may run the command in a separate
+terminal and test from their normal Owlbear browser session.
 For a requested release, a passing complete local release gate authorizes the
 documented commit, push, deployment, and public-asset verification workflow.
 Then test through the hosted manifest in Owlbear Rodeo.
@@ -243,6 +277,23 @@ connection:
 39. Reveal a pending target while observing a player client under network
     latency. Confirm the action executes even if the action broadcast reaches
     that client just before its local visibility update.
+40. Define a Player Play Area from one item and several selected items. Move,
+    resize, hide, and delete the source items and confirm the saved rectangle
+    does not change.
+41. On a separate player client, drag slowly and quickly through every edge,
+    hold the pointer far outside, slide along an edge, and drag diagonally into
+    a corner. Confirm nearest-edge clamping without ping-pong or jitter.
+42. Drag multiple selected Characters into an edge and corner and confirm their
+    relative formation is preserved. Drop a new Character far outside and, if
+    supported, rapidly throw or flick one. Repeat with latency when practical.
+43. Confirm scaled and rotated Character bounds remain fully inside, oversized
+    Characters settle deterministically, and GM movement stays unrestricted.
+44. Confirm one completed-movement notification, no viewport movement while a
+    corrected Character is visible, and recovery Focus when it is wholly
+    offscreen.
+45. Disable and clear the Play Area, globally disable and re-enable Where am I?,
+    and change scenes. Confirm no pre-existing Character is swept or stale
+    correction/recovery work carried into another scene.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

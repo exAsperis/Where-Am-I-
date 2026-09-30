@@ -4,6 +4,7 @@ export const LEGACY_EXTENSION_NAMESPACE = "io.github.exasperis.where-am-i";
 export const PLAYER_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/player-settings`;
 export const PLAYER_SETTINGS_STORAGE_KEY = `${EXTENSION_NAMESPACE}/player-settings`;
 export const ROOM_SETTINGS_METADATA_KEY = `${EXTENSION_NAMESPACE}/room-settings`;
+export const PLAY_AREA_METADATA_KEY = `${EXTENSION_NAMESPACE}/play-area`;
 export const GM_HIGHLIGHT_SETTINGS_METADATA_KEY =
   "com.ex-asperis.where-am-i/highlight-settings";
 export const LEGACY_PLAYER_SETTINGS_METADATA_KEY = `${LEGACY_EXTENSION_NAMESPACE}/player-settings`;
@@ -47,3 +48,7 @@ export const FOCUS_PARTY_CONTEXT_MENU_ID = `${EXTENSION_NAMESPACE}/focus-party`;
 export const HIGHLIGHT_PARTY_CONTEXT_MENU_ID = `${EXTENSION_NAMESPACE}/highlight-party`;
 export const CANCEL_FOCUS_PARTY_CONTEXT_MENU_ID = `${EXTENSION_NAMESPACE}/cancel-focus-party`;
 export const CANCEL_HIGHLIGHT_PARTY_CONTEXT_MENU_ID = `${EXTENSION_NAMESPACE}/cancel-highlight-party`;
+export const SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID = `${EXTENSION_NAMESPACE}/set-player-play-area`;
+
+export const PLAY_AREA_CORRECTION_EPSILON = 0.01;
+export const PLAY_AREA_RECOVERY_DEBOUNCE_MS = 350;

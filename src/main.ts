@@ -64,6 +64,13 @@ import {
 } from "./token-actions";
 import "./styles.css";
 import { RELEASE_VERSION } from "./version";
+import {
+  clearPlayArea,
+  getPlayAreaSettings,
+  readPlayAreaSettings,
+  setPlayAreaEnabled,
+  type PlayAreaSettings,
+} from "./play-area";
 
 type StatusTone = "neutral" | "success" | "warning" | "error";
 
@@ -97,6 +104,7 @@ class PopoverController {
   #sceneReady = false;
   #ownerOnlyEnabled = false;
   #pendingActions: PendingPartyAction[] = [];
+  #playArea: PlayAreaSettings | undefined;
 
   constructor(root: HTMLElement) {
     this.#root = root;
@@ -186,6 +194,7 @@ class PopoverController {
       );
 
       if (role === "GM") {
+        this.#playArea = sceneReady ? await getPlayAreaSettings() : undefined;
         await this.#startGmView();
       } else {
         await this.#startPlayerView();
@@ -249,6 +258,7 @@ class PopoverController {
       }),
       OBR.scene.onMetadataChange((metadata) => {
         this.#pendingActions = readPendingPartyActions(metadata);
+        this.#playArea = readPlayAreaSettings(metadata);
         this.#render();
       }),
       OBR.scene.onReadyChange((ready) => {
@@ -258,6 +268,7 @@ class PopoverController {
         } else {
           this.#items = [];
           this.#pendingActions = [];
+          this.#playArea = undefined;
           this.#render();
         }
       }),
@@ -275,12 +286,16 @@ class PopoverController {
 
   async #refreshItems(): Promise<void> {
     try {
-      const [items, pendingActions] = await Promise.all([
+      const [items, pendingActions, playArea] = await Promise.all([
         this.#getSceneItems(),
         this.#role === "GM" ? getPendingPartyActions() : Promise.resolve([]),
+        this.#role === "GM"
+          ? getPlayAreaSettings()
+          : Promise.resolve(undefined),
       ]);
       this.#items = items;
       this.#pendingActions = pendingActions;
+      if (this.#role === "GM") this.#playArea = playArea;
       this.#render();
     } catch (error) {
       console.error("Where am I? could not refresh character labels.", error);
@@ -484,6 +499,22 @@ class PopoverController {
         this.#createHighlightColorField(),
         globalToggle,
         moveHereToggle,
+        this.#createPlayAreaState(),
+        this.#createToggle(
+          "Keep player characters inside Play Area",
+          "Constrains Characters added or moved by a player. GM movement remains unrestricted.",
+          this.#playArea?.enabled ?? false,
+          this.#busyAction !== undefined || !this.#playArea,
+          (enabled) => void this.#updatePlayAreaEnabled(enabled),
+        ),
+        this.#createButton(
+          this.#busyAction === "clear-play-area"
+            ? "Clearing…"
+            : "Clear Play Area",
+          "secondary",
+          this.#busyAction !== undefined || !this.#playArea,
+          () => void this.#clearPlayArea(),
+        ),
       ),
     );
 
@@ -568,6 +599,13 @@ class PopoverController {
     controls.append(partyTile, section);
     controls.append(this.#renderAllCharacterTokens());
     return controls;
+  }
+
+  #createPlayAreaState(): HTMLElement {
+    const state = document.createElement("p");
+    state.className = "play-area-state";
+    state.textContent = `Play Area: ${this.#playArea ? "configured" : "not configured"}`;
+    return state;
   }
 
   #renderAllCharacterTokens(): HTMLElement {
@@ -1318,6 +1356,25 @@ class PopoverController {
         message: `Move here actions are now ${enabled ? "shown" : "hidden"}.`,
         tone: "success",
       };
+    });
+  }
+
+  async #updatePlayAreaEnabled(enabled: boolean): Promise<void> {
+    await this.#runAction("play-area-setting", async () => {
+      await setPlayAreaEnabled(enabled);
+      if (this.#playArea) this.#playArea = { ...this.#playArea, enabled };
+      this.#status = {
+        message: `Player Play Area enforcement ${enabled ? "enabled" : "disabled"}.`,
+        tone: "success",
+      };
+    });
+  }
+
+  async #clearPlayArea(): Promise<void> {
+    await this.#runAction("clear-play-area", async () => {
+      await clearPlayArea();
+      this.#playArea = undefined;
+      this.#status = { message: "Player Play Area cleared.", tone: "success" };
     });
   }
 
