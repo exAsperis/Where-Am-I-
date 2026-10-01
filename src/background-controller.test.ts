@@ -6,6 +6,8 @@ import {
   FOCUS_PARTY_CONTEXT_MENU_ID,
   HIGHLIGHT_PARTY_CONTEXT_MENU_ID,
   PENDING_PARTY_ACTIONS_METADATA_KEY,
+  PLAY_AREA_METADATA_KEY,
+  SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID,
   TARGET_ACTION_BROADCAST_CHANNEL,
 } from "./constants";
 
@@ -52,6 +54,13 @@ const sdk = vi.hoisted(() => ({
       getItems: vi.fn(async (ids?: string[]) =>
         ids ? state.items.filter((item) => ids.includes(item.id)) : state.items,
       ),
+      getItemBounds: vi.fn(async () => ({
+        min: { x: 10, y: 20 },
+        max: { x: 110, y: 220 },
+        width: 100,
+        height: 200,
+        center: { x: 60, y: 120 },
+      })),
       updateItems: vi.fn(
         async (ids: string[], update: (items: Item[]) => void) => {
           update(state.items.filter((item) => ids.includes(item.id)));
@@ -130,6 +139,26 @@ describe("GM pending Party action integration", () => {
         }),
       }),
     ]);
+    expect(
+      state.contextMenus.get(SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID)?.icons,
+    ).toEqual([
+      expect.objectContaining({
+        label: "Set Play Area",
+        filter: { roles: ["GM"], min: 1 },
+      }),
+    ]);
+
+    state.contextMenus
+      .get(SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID)
+      ?.onClick?.({ items: state.items }, SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID);
+    await vi.waitFor(() => {
+      expect(state.sceneMetadata[PLAY_AREA_METADATA_KEY]).toEqual({
+        version: 1,
+        enabled: true,
+        min: { x: 10, y: 20 },
+        max: { x: 110, y: 220 },
+      });
+    });
 
     state.contextMenus
       .get(FOCUS_PARTY_CONTEXT_MENU_ID)

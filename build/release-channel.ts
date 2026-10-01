@@ -12,7 +12,7 @@ interface ExtensionManifest {
   background_url: string;
 }
 
-const PRODUCTION_ORIGIN = "https://exasperis.github.io/Where-Am-I-/";
+const PRODUCTION_ORIGIN = "https://where-am-i.ex-asperis.com/";
 const BETA_ORIGIN = "https://where-am-i-beta.ex-asperis.com/";
 
 export function parseReleaseChannel(value: string | undefined): ReleaseChannel {

@@ -2,7 +2,7 @@
   "name": "where-am-i-obr-extension",
   "version": "1.2.0",
   "private": true,
-  "homepage": "https://exasperis.github.io/Where-Am-I-/",
+  "homepage": "https://where-am-i.ex-asperis.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/exAsperis/Where-Am-I-.git"
@@ -13,6 +13,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "vite",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",

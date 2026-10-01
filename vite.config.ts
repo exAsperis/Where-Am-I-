@@ -27,6 +27,12 @@ export default defineConfig({
       },
     },
   ],
+  server: {
+    cors: {
+      origin: "https://www.owlbear.rodeo",
+    },
+    strictPort: true,
+  },
   build: {
     rollupOptions: {
       input: {

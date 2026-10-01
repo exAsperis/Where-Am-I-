@@ -14,7 +14,7 @@ build the project, deploy a package, or host your own copy.
 
 Add this public manifest URL to your Owlbear Rodeo room:
 
-<https://exasperis.github.io/Where-Am-I-/manifest.json>
+<https://where-am-i.ex-asperis.com/manifest.json>
 
 Once installed by the room's GM, players can open **Where am I?** from the
 Owlbear Rodeo extension bar.
@@ -65,6 +65,29 @@ are saved locally in this browser for your Owlbear Rodeo player ID.
   items.
 - **Highlight color** sets the shared room default for players. Its Default
   state is orange, and a Custom color is shared by all GMs.
+
+### Player Play Area
+
+A GM can select one or more scene items and choose **Set Play Area**
+from the item context menu. Where am I? saves the union of those item bounds as
+a scene-specific rectangle. The source items are not linked afterward, so
+moving, resizing, hiding, or deleting them does not change the saved area.
+
+GM Settings shows whether a Play Area is configured, enables or disables
+**Keep player characters inside Play Area**, and can clear the saved area. When
+enabled, Characters added or moved outside it by a player are returned to the
+nearest legal position so their entire rendered bounds finish inside the
+rectangle when possible. GM movement remains unrestricted. Owlbear's native
+dragging may briefly show a Character outside the boundary before the
+corrective scene update arrives; the feature does not prevent that visual
+penetration.
+Owlbear does not expose whether a player-authored position write came from a
+native drag or another extension, so both are constrained consistently.
+
+Existing Characters are not relocated merely because a scene or Play Area
+loads. After a correction settles, Where am I? leaves the viewport alone if the
+Character is visible; if it is wholly offscreen, it uses the existing Focus and
+Highlight behavior to help the player find it.
 
 ![Pending party highlights on hidden tokens, with cancellation controls](screenshots/wai-pending-highlight.jpg)
 
@@ -134,6 +157,19 @@ pnpm run check
 pnpm run build
 ```
 
+For local Owlbear Rodeo testing, start Vite from a separate terminal:
+
+```sh
+pnpm run dev
+```
+
+Then add `http://localhost:5173/manifest.local.json` as a development extension
+in your Owlbear Rodeo profile and enable it in the test room. The local manifest
+uses the Vite-served `main.html` and `background.html`; the production manifest
+and hosted URLs remain unchanged. Vite only permits cross-origin development
+requests from `https://www.owlbear.rodeo`, and startup fails instead of silently
+choosing another port if 5173 is occupied.
+
 Codex Desktop contributors must follow
 [`docs/development-environment.md`](docs/development-environment.md), which
 documents the bundled toolchain, version synchronization, production base
@@ -148,7 +184,9 @@ $env:VITE_BASE_PATH = "/Where-Am-I-/"
 pnpm run build
 ```
 
-Do not use a local browser preview for Owlbear integration in this workspace.
+Codex must not start the local server or use its isolated browser for Owlbear
+integration in this workspace; a developer may run the command in a separate
+terminal and test from their normal Owlbear browser session.
 For a requested release, a passing complete local release gate authorizes the
 documented commit, push, deployment, and public-asset verification workflow.
 Then test through the hosted manifest in Owlbear Rodeo.
@@ -156,7 +194,7 @@ Then test through the hosted manifest in Owlbear Rodeo.
 ### Extension-store publication
 
 The store listing source is [`public/store.md`](public/store.md), hosted at
-<https://exasperis.github.io/Where-Am-I-/store.md>.
+<https://where-am-i.ex-asperis.com/store.md>.
 
 To submit the extension, add this entry to the official Owlbear Rodeo
 extensions repository's `extensions.json` in a single-commit pull request:
@@ -243,6 +281,34 @@ connection:
 39. Reveal a pending target while observing a player client under network
     latency. Confirm the action executes even if the action broadcast reaches
     that client just before its local visibility update.
+40. Define a Player Play Area from one item and several selected items. Move,
+    resize, hide, and delete the source items and confirm the saved rectangle
+    does not change.
+41. On a separate player client, move a Character outside each edge and confirm
+    it returns to the nearest legal position. Brief penetration during Owlbear's
+    native drag is expected before the corrective update arrives.
+42. Move a Character outside each corner and confirm both axes are corrected to
+    the nearest legal position.
+43. Move a Character quickly and far outside the area, then drop a new Character
+    far outside. Confirm both return to their nearest legal positions.
+44. Confirm corrected Characters' full rendered bounds finish inside the Play
+    Area when possible, including scaled and rotated Characters.
+45. Confirm oversized Characters settle deterministically without a correction
+    loop and show only the existing one-time warning.
+46. Confirm GM-authored movement remains unrestricted.
+47. Move two or more Characters independently and in quick succession. Confirm
+    correcting one never moves another unrelated Character, even when both
+    appear in one scene update.
+48. Confirm a visible correction causes no viewport movement and no toast.
+49. Confirm a wholly offscreen corrected Character receives the existing Focus
+    and highlight recovery plus exactly one informational notification:
+    **Character returned to the Play Area.**
+50. Disable global player behavior, disable the Play Area, clear it, and change
+    scenes. Confirm correction and recovery state clean up correctly.
+51. Confirm pre-existing Characters are not swept merely because the extension,
+    scene, or Play Area loads.
+52. Repeat movement checks under noticeable latency where practical, treating
+    this as corrective snap-back testing rather than wall collision testing.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

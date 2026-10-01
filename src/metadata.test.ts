@@ -273,6 +273,7 @@ describe("metadata settings", () => {
       singleTokenZoom: 1,
       highlightEnabled: true,
       highlightThickness: 24,
+      settingsExpanded: true,
     });
     expect(sdk.player.getMetadata).toHaveBeenCalledTimes(1);
   });

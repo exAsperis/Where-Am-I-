@@ -1,0 +1,17 @@
+{
+  "name": "Where am I? (Local)",
+  "version": "1.2.0",
+  "manifest_version": 1,
+  "author": "ex Asperis",
+  "description": "Local development build of Where am I?",
+  "homepage_url": "https://github.com/exAsperis/Where-Am-I-",
+  "icon": "/icon.svg",
+  "action": {
+    "title": "Where am I? (Local)",
+    "icon": "/icon.svg",
+    "popover": "/main.html",
+    "height": 860,
+    "width": 360
+  },
+  "background_url": "/background.html"
+}

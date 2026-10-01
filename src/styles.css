@@ -146,6 +146,13 @@ h2 {
   padding-top: 8px;
 }
 
+.play-area-state {
+  margin: 2px 4px 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
 .toggle {
   display: grid;
   grid-template-columns: 1fr auto;
