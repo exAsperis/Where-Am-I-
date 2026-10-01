@@ -8,6 +8,9 @@ const state = vi.hoisted(() => ({
   items: [] as Item[],
   boundsCalls: 0,
   boundsGate: undefined as Promise<void> | undefined,
+  updateGate: undefined as Promise<void> | undefined,
+  updateWritesInFlight: 0,
+  maximumUpdateWritesInFlight: 0,
   screenOffset: { x: 0, y: 0 },
 }));
 const sdk = vi.hoisted(() => ({
@@ -42,10 +45,17 @@ const sdk = vi.hoisted(() => ({
           itemsOrIds: Item[] | string[],
           update: (items: Item[]) => void,
         ) => {
+          state.updateWritesInFlight++;
+          state.maximumUpdateWritesInFlight = Math.max(
+            state.maximumUpdateWritesInFlight,
+            state.updateWritesInFlight,
+          );
+          await state.updateGate;
           const ids = itemsOrIds.map((itemOrId) =>
             typeof itemOrId === "string" ? itemOrId : itemOrId.id,
           );
           update(state.items.filter((item) => ids.includes(item.id)));
+          state.updateWritesInFlight--;
         },
       ),
     },
@@ -121,6 +131,9 @@ describe("Player Play Area runtime", () => {
     state.items = [character("hero", 150)];
     state.boundsCalls = 0;
     state.boundsGate = undefined;
+    state.updateGate = undefined;
+    state.updateWritesInFlight = 0;
+    state.maximumUpdateWritesInFlight = 0;
     state.screenOffset = { x: 0, y: 0 };
   });
 
@@ -153,6 +166,10 @@ describe("Player Play Area runtime", () => {
     await vi.waitFor(() =>
       expect(sdk.scene.items.updateItems).toHaveBeenCalledTimes(1),
     );
+    expect(sdk.scene.items.updateItems).toHaveBeenLastCalledWith(
+      ["hero"],
+      expect.any(Function),
+    );
     expect(state.items[0]?.position.x).toBe(90);
     enforcer.dispose();
   });
@@ -184,6 +201,31 @@ describe("Player Play Area runtime", () => {
     await vi.waitFor(() =>
       expect(sdk.scene.items.updateItems).toHaveBeenCalledTimes(2),
     );
+    enforcer.dispose();
+  });
+
+  it("does not write legal proposals and immediately accepts re-entry", async () => {
+    state.items = [character("hero", 50)];
+    const enforcer = new PlayerPlayAreaEnforcer("player");
+    await enforcer.initialize(true);
+
+    state.items[0] = character("hero", 70);
+    enforcer.enqueue([...state.items]);
+    await settle();
+    expect(sdk.scene.items.updateItems).not.toHaveBeenCalled();
+
+    state.items[0] = character("hero", 120);
+    enforcer.enqueue([...state.items]);
+    await vi.waitFor(() => expect(state.items[0]?.position.x).toBe(90));
+    expect(sdk.scene.items.updateItems).toHaveBeenCalledTimes(1);
+
+    enforcer.enqueue([...state.items]);
+    await settle();
+    state.items[0] = character("hero", 80);
+    enforcer.enqueue([...state.items]);
+    await settle();
+    expect(state.items[0]?.position.x).toBe(80);
+    expect(sdk.scene.items.updateItems).toHaveBeenCalledTimes(1);
     enforcer.dispose();
   });
 
@@ -233,6 +275,7 @@ describe("Player Play Area runtime", () => {
     state.items[0] = character("hero", 150, "player", 2, 45);
     enforcer.enqueue([...state.items]);
     await vi.waitFor(() => expect(state.boundsCalls).toBe(3));
+    expect(sdk.scene.items.getItems).toHaveBeenCalledTimes(1);
     enforcer.dispose();
   });
 
@@ -240,23 +283,23 @@ describe("Player Play Area runtime", () => {
     state.items = [character("hero", 50)];
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
-    state.boundsCalls = 0;
-    let releaseBounds = (): void => undefined;
-    state.boundsGate = new Promise<void>((resolve) => {
-      releaseBounds = resolve;
+    let releaseUpdate = (): void => undefined;
+    state.updateGate = new Promise<void>((resolve) => {
+      releaseUpdate = resolve;
     });
-    state.items[0] = character("hero", 120, "player", 2);
+    state.items[0] = character("hero", 120);
     enforcer.enqueue([...state.items]);
-    state.items[0] = character("hero", 130, "player", 2);
+    state.items[0] = character("hero", 130);
     enforcer.enqueue([...state.items]);
-    state.items[0] = character("hero", 140, "player", 2);
+    state.items[0] = character("hero", 140);
     enforcer.enqueue([...state.items]);
-    releaseBounds();
-    state.boundsGate = undefined;
+    releaseUpdate();
+    state.updateGate = undefined;
     await vi.waitFor(() => expect(state.items[0]?.position.x).toBe(90));
     expect(sdk.scene.items.updateItems.mock.calls.length).toBeLessThanOrEqual(
       2,
     );
+    expect(state.maximumUpdateWritesInFlight).toBe(1);
     enforcer.dispose();
   });
 

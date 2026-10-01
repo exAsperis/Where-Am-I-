@@ -83,12 +83,42 @@ describe("Player Play Area geometry", () => {
     if (y) expect(result.position.y).toBe(40);
   });
 
-  it("slides along a boundary without changing the legal axis", () => {
+  it.each([
+    [
+      { x: -20, y: 52 },
+      { x: 10, y: 52 },
+    ],
+    [
+      { x: 120, y: 52 },
+      { x: 90, y: 52 },
+    ],
+    [
+      { x: 52, y: -20 },
+      { x: 52, y: 10 },
+    ],
+    [
+      { x: 52, y: 120 },
+      { x: 52, y: 70 },
+    ],
+  ])(
+    "slides along every boundary by clamping only the illegal axis",
+    (input, expected) => {
+      expect(clampItemPosition(input, centered, area).position).toEqual(
+        expected,
+      );
+    },
+  );
+
+  it("naturally releases the boundary when a proposal re-enters the legal area", () => {
     expect(
       clampItemPosition({ x: 120, y: 52 }, centered, area).position,
     ).toEqual({
       x: 90,
       y: 52,
+    });
+    expect(clampItemPosition({ x: 75, y: 52 }, centered, area)).toMatchObject({
+      position: { x: 75, y: 52 },
+      changed: false,
     });
   });
 

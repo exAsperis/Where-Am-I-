@@ -213,9 +213,8 @@ export class PlayerPlayAreaEnforcer {
     generation: number,
   ): Promise<void> {
     if (!this.#globalEnabled || !this.#settings?.enabled) return;
-    const characters = items.filter(isCharacter);
     await Promise.all(
-      characters.map(async (item) => {
+      items.filter(isCharacter).map(async (item) => {
         const bounds = await OBR.scene.items.getItemBounds([item.id]);
         if (this.#disposed || generation !== this.#generation) return;
         this.#geometry.set(item.id, {
@@ -342,7 +341,7 @@ export class PlayerPlayAreaEnforcer {
       this.#recoveryIds.add(correction.id);
     }
     await OBR.scene.items.updateItems(
-      positioned.map(({ item }) => item),
+      corrections.map((correction) => correction.id),
       (drafts) => {
         for (const draft of drafts) {
           const correction = corrections.find((value) => value.id === draft.id);
@@ -372,12 +371,9 @@ export class PlayerPlayAreaEnforcer {
     const cached = this.#geometry.get(item.id);
     if (cached?.signature === signature) return cached.offsets;
     const bounds = await OBR.scene.items.getItemBounds([item.id]);
-    const [currentItem] = await OBR.scene.items.getItems([item.id]);
-    const reference =
-      currentItem && isCharacter(currentItem) ? currentItem : item;
-    const offsets = getBoundsOffsets(reference.position, bounds);
+    const offsets = getBoundsOffsets(item.position, bounds);
     this.#geometry.set(item.id, {
-      signature: geometrySignature(reference),
+      signature,
       offsets,
     });
     return offsets;
