@@ -142,7 +142,7 @@ describe("GM pending Party action integration", () => {
       state.contextMenus.get(SET_PLAYER_PLAY_AREA_CONTEXT_MENU_ID)?.icons,
     ).toEqual([
       expect.objectContaining({
-        label: "Set as Player Play Area",
+        label: "Set Play Area",
         filter: { roles: ["GM"], min: 1 },
       }),
     ]);

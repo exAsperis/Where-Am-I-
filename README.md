@@ -68,7 +68,7 @@ browser for your Owlbear Rodeo player ID.
 
 ### Player Play Area
 
-A GM can select one or more scene items and choose **Set as Player Play Area**
+A GM can select one or more scene items and choose **Set Play Area**
 from the item context menu. Where am I? saves the union of those item bounds as
 a scene-specific rectangle. The source items are not linked afterward, so
 moving, resizing, hiding, or deleting them does not change the saved area.

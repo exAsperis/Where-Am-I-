@@ -244,7 +244,7 @@ export class BackgroundController {
       icons: [
         {
           icon,
-          label: "Set as Player Play Area",
+          label: "Set Play Area",
           filter: { roles: ["GM"], min: 1 },
         },
       ],
