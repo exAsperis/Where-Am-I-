@@ -83,7 +83,6 @@ export class BackgroundController {
       );
       await this.#startGmContextMenus();
       this.#requestPendingProcessing();
-      return;
     } else {
       this.#playerId = OBR.player.id;
 
@@ -113,26 +112,28 @@ export class BackgroundController {
             void this.#handleRemoteCommand(data, connectionId);
           },
         ),
+        OBR.scene.onMetadataChange((metadata) => {
+          this.#playAreaEnforcer?.handleSceneMetadata(metadata);
+        }),
+        OBR.scene.items.onChange((items) => {
+          this.#playAreaEnforcer?.enqueue(items);
+        }),
       );
+
+      this.#playAreaEnforcer = new PlayerPlayAreaEnforcer(this.#playerId);
+      await this.#playAreaEnforcer.initialize(this.#globalEnabled);
     }
 
     this.#disposeCallbacks.push(
       OBR.scene.onReadyChange((ready) => {
-        void this.#playAreaEnforcer?.refreshScene();
+        if (this.#role === "PLAYER") {
+          void this.#playAreaEnforcer?.refreshScene();
+        }
         if (this.#readiness.observe(ready)) {
           void this.#runAutomaticFocus("scene change");
         }
       }),
-      OBR.scene.onMetadataChange((metadata) => {
-        this.#playAreaEnforcer?.handleSceneMetadata(metadata);
-      }),
-      OBR.scene.items.onChange((items) => {
-        this.#playAreaEnforcer?.enqueue(items);
-      }),
     );
-
-    this.#playAreaEnforcer = new PlayerPlayAreaEnforcer(this.#playerId);
-    await this.#playAreaEnforcer.initialize(this.#globalEnabled);
 
     try {
       const ready = await OBR.scene.isReady();
