@@ -184,7 +184,9 @@ describe("highlight geometry", () => {
     expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
       expect.objectContaining({
         type: "SHAPE",
-        layer: "CONTROL",
+        layer: "CHARACTER",
+        disableAutoZIndex: true,
+        zIndex: -1,
         disableHit: true,
         position: { x: 60, y: 120 },
         width: 4_000,
@@ -218,6 +220,15 @@ describe("highlight geometry", () => {
           fillColor: "#123456",
           strokeColor: "#123456",
         }),
+      }),
+    ]);
+  });
+
+  it("uses the requested highlight thickness", async () => {
+    await showHighlights([character], true, "#123456", 24);
+    expect(sdk.scene.local.addItems).toHaveBeenCalledWith([
+      expect.objectContaining({
+        style: expect.objectContaining({ strokeWidth: 24 }),
       }),
     ]);
   });

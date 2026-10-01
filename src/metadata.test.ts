@@ -43,8 +43,10 @@ import {
   getPlayerSettings,
   getRoomSettings,
   setPlayerAutoFocusEnabled,
+  setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerHighlightThickness,
   setPlayerHighlightColor,
   setPlayerSettingsExpanded,
   setRoomHighlightColor,
@@ -71,16 +73,20 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
     });
     expect(storedPlayerSettings()).toEqual({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -98,8 +104,10 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 1,
       highlightEnabled: true,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -112,8 +120,10 @@ describe("metadata settings", () => {
     });
     await expect(getPlayerSettings()).resolves.toEqual({
       autoFocusEnabled: true,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.5,
       highlightEnabled: true,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -155,8 +165,15 @@ describe("metadata settings", () => {
 
   it("defaults missing or malformed settings to enabled", () => {
     expect(readPlayerSettings({}).autoFocusEnabled).toBe(true);
+    expect(readPlayerSettings({}).gmAutoFocusEnabled).toBe(false);
     expect(readPlayerSettings({}).singleTokenZoom).toBe(0.5);
     expect(readPlayerSettings({}).highlightEnabled).toBe(true);
+    expect(readPlayerSettings({}).highlightThickness).toBe(12);
+    expect(
+      readPlayerSettings({
+        [PLAYER_SETTINGS_METADATA_KEY]: { highlightThickness: 101 },
+      }).highlightThickness,
+    ).toBe(100);
     expect(readPlayerSettings({}).settingsExpanded).toBe(false);
     expect(
       readPlayerSettings({
@@ -188,8 +205,10 @@ describe("metadata settings", () => {
       }),
     ).toEqual({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: false,
       singleTokenZoom: 0.75,
       highlightEnabled: false,
+      highlightThickness: 12,
       highlightColorMode: "DEFAULT",
       highlightColor: "#fa5300",
       settingsExpanded: false,
@@ -205,8 +224,10 @@ describe("metadata settings", () => {
     sdk.player.getMetadata.mockResolvedValue({
       [PLAYER_SETTINGS_METADATA_KEY]: {
         autoFocusEnabled: true,
+        gmAutoFocusEnabled: false,
         singleTokenZoom: 0.75,
         highlightEnabled: false,
+        highlightThickness: 12,
         highlightColorMode: "DEFAULT",
         highlightColor: "#fa5300",
         settingsExpanded: false,
@@ -237,10 +258,21 @@ describe("metadata settings", () => {
       highlightEnabled: true,
       settingsExpanded: true,
     });
+
+    await setGmAutoFocusEnabled(true);
+    expect(storedPlayerSettings()).toMatchObject({
+      gmAutoFocusEnabled: true,
+      settingsExpanded: true,
+    });
+
+    await setPlayerHighlightThickness(24);
+    expect(storedPlayerSettings()).toMatchObject({ highlightThickness: 24 });
     await expect(getPlayerSettings()).resolves.toMatchObject({
       autoFocusEnabled: false,
+      gmAutoFocusEnabled: true,
       singleTokenZoom: 1,
       highlightEnabled: true,
+      highlightThickness: 24,
       settingsExpanded: true,
     });
     expect(sdk.player.getMetadata).toHaveBeenCalledTimes(1);

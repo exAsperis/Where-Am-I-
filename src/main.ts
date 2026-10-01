@@ -5,6 +5,9 @@ import {
   GM_POPOVER_MAX_HEIGHT,
   GM_POPOVER_MIN_HEIGHT,
   HIGHLIGHT_COLOR,
+  DEFAULT_HIGHLIGHT_THICKNESS,
+  MAX_HIGHLIGHT_THICKNESS,
+  MIN_HIGHLIGHT_THICKNESS,
   PLAYER_POPOVER_MAX_HEIGHT,
   PLAYER_POPOVER_MIN_HEIGHT,
   POPOVER_WIDTH,
@@ -32,11 +35,14 @@ import {
 import {
   getPlayerSettings,
   getRoomSettings,
+  normalizeHighlightThickness,
   readRoomSettings,
   setGlobalEnabled,
   setPlayerAutoFocusEnabled,
+  setGmAutoFocusEnabled,
   setPlayerSingleTokenZoom,
   setPlayerHighlightEnabled,
+  setPlayerHighlightThickness,
   setPlayerSettingsExpanded,
   setPlayerHighlightColor,
   setRoomHighlightColor,
@@ -62,8 +68,14 @@ import {
   moveCharacterTokenToViewportCenter,
   toggleCharacterTokenVisibility,
 } from "./token-actions";
+import {
+  MY_SETTINGS_EXPANDED_KEY,
+  readDisclosurePreference,
+  ROOM_SETTINGS_EXPANDED_KEY,
+  writeDisclosurePreference,
+} from "./disclosure-preferences";
 import "./styles.css";
-import { RELEASE_VERSION } from "./version";
+import { DISPLAY_NAME, DISPLAY_VERSION } from "./release-channel";
 import {
   clearPlayArea,
   getPlayAreaSettings,
@@ -86,9 +98,13 @@ class PopoverController {
   #globalEnabled = true;
   #showMoveHere = false;
   #autoFocusEnabled = true;
+  #gmAutoFocusEnabled = false;
   #singleTokenZoom = 0.5;
   #highlightEnabled = true;
+  #highlightThickness = DEFAULT_HIGHLIGHT_THICKNESS;
   #settingsExpanded = false;
+  #roomSettingsExpanded = readDisclosurePreference(ROOM_SETTINGS_EXPANDED_KEY);
+  #mySettingsExpanded = readDisclosurePreference(MY_SETTINGS_EXPANDED_KEY);
   #playerHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
   #playerHighlightColor = "#fa5300";
   #roomHighlightColorMode: "DEFAULT" | "CUSTOM" = "DEFAULT";
@@ -111,7 +127,7 @@ class PopoverController {
   }
 
   async start(): Promise<void> {
-    document.documentElement.dataset.release = RELEASE_VERSION;
+    document.documentElement.dataset.release = DISPLAY_VERSION;
     const dismissMenus = (event: PointerEvent): void => {
       const target = event.target;
       if (!(target instanceof Element && target.closest(".action-menu"))) {
@@ -160,8 +176,10 @@ class PopoverController {
       this.#globalEnabled = roomSettings.globalEnabled;
       this.#showMoveHere = roomSettings.showMoveHere;
       this.#autoFocusEnabled = playerSettings.autoFocusEnabled;
+      this.#gmAutoFocusEnabled = playerSettings.gmAutoFocusEnabled;
       this.#singleTokenZoom = playerSettings.singleTokenZoom;
       this.#highlightEnabled = playerSettings.highlightEnabled;
+      this.#highlightThickness = playerSettings.highlightThickness;
       this.#settingsExpanded = playerSettings.settingsExpanded;
       this.#playerHighlightColorMode = playerSettings.highlightColorMode;
       this.#playerHighlightColor = playerSettings.highlightColor;
@@ -356,7 +374,7 @@ class PopoverController {
     icon.alt = "";
     const title = document.createElement("h1");
     title.id = "app-title";
-    title.textContent = "Where am I?";
+    title.textContent = DISPLAY_NAME;
     header.append(icon, title);
     app.append(header);
 
@@ -379,7 +397,7 @@ class PopoverController {
 
     const version = document.createElement("p");
     version.className = "version";
-    version.textContent = `Version ${RELEASE_VERSION}`;
+    version.textContent = `Version ${DISPLAY_VERSION}`;
     app.append(version);
 
     this.#root.append(app);
@@ -407,6 +425,7 @@ class PopoverController {
       this.#createSettingsSection(
         this.#createZoomField(),
         this.#createHighlightToggle(),
+        this.#createHighlightThicknessField(),
         this.#createHighlightColorField(),
         toggle,
       ),
@@ -492,28 +511,53 @@ class PopoverController {
       this.#busyAction !== undefined,
       (enabled) => void this.#updateShowMoveHere(enabled),
     );
+    const gmAutoFocusToggle = this.#createToggle(
+      "Automatically focus all characters",
+      "Automatically focuses all visible Character-layer items for you when the extension starts or the scene changes. This setting applies only to this GM.",
+      this.#gmAutoFocusEnabled,
+      this.#busyAction !== undefined,
+      (enabled) => void this.#updateGmAutoFocusPreference(enabled),
+    );
     controls.append(
       this.#createSettingsSection(
-        this.#createZoomField(),
-        this.#createHighlightToggle(),
-        this.#createHighlightColorField(),
-        globalToggle,
-        moveHereToggle,
-        this.#createPlayAreaState(),
-        this.#createToggle(
-          "Keep player characters inside Play Area",
-          "Returns Characters added or moved by a player to the Play Area if they leave it. GM movement remains unrestricted.",
-          this.#playArea?.enabled ?? false,
-          this.#busyAction !== undefined || !this.#playArea,
-          (enabled) => void this.#updatePlayAreaEnabled(enabled),
+        this.#createSettingsGroup(
+          "Room settings",
+          ROOM_SETTINGS_EXPANDED_KEY,
+          this.#roomSettingsExpanded,
+          (expanded) => {
+            this.#roomSettingsExpanded = expanded;
+          },
+          globalToggle,
+          moveHereToggle,
+          this.#createHighlightColorField(),
+          this.#createPlayAreaState(),
+          this.#createToggle(
+            "Keep player characters inside Play Area",
+            "Returns Characters added or moved by a player to the Play Area if they leave it. GM movement remains unrestricted.",
+            this.#playArea?.enabled ?? false,
+            this.#busyAction !== undefined || !this.#playArea,
+            (enabled) => void this.#updatePlayAreaEnabled(enabled),
+          ),
+          this.#createButton(
+            this.#busyAction === "clear-play-area"
+              ? "Clearing…"
+              : "Clear Play Area",
+            "secondary",
+            this.#busyAction !== undefined || !this.#playArea,
+            () => void this.#clearPlayArea(),
+          ),
         ),
-        this.#createButton(
-          this.#busyAction === "clear-play-area"
-            ? "Clearing…"
-            : "Clear Play Area",
-          "secondary",
-          this.#busyAction !== undefined || !this.#playArea,
-          () => void this.#clearPlayArea(),
+        this.#createSettingsGroup(
+          "My settings",
+          MY_SETTINGS_EXPANDED_KEY,
+          this.#mySettingsExpanded,
+          (expanded) => {
+            this.#mySettingsExpanded = expanded;
+          },
+          this.#createZoomField(),
+          gmAutoFocusToggle,
+          this.#createHighlightToggle(),
+          this.#createHighlightThicknessField(),
         ),
       ),
     );
@@ -1045,6 +1089,34 @@ class PopoverController {
     return details;
   }
 
+  #createSettingsGroup(
+    headingText: string,
+    storageKey: string,
+    expanded: boolean,
+    onToggle: (expanded: boolean) => void,
+    ...settings: HTMLElement[]
+  ): HTMLDetailsElement {
+    const group = document.createElement("details");
+    group.className = "settings-group";
+    group.open = expanded;
+    const summary = document.createElement("summary");
+    summary.textContent = headingText;
+    const content = document.createElement("div");
+    content.className = "settings-group__content";
+    content.append(...settings);
+    group.append(summary, content);
+    group.addEventListener("toggle", () => {
+      if (group.open === expanded) return;
+      expanded = group.open;
+      onToggle(expanded);
+      writeDisclosurePreference(storageKey, expanded);
+      void this.#resizeGmPopover().catch((error: unknown) => {
+        console.error("Where am I? could not resize the GM popover.", error);
+      });
+    });
+    return group;
+  }
+
   #createZoomField(): HTMLElement {
     const field = document.createElement("div");
     field.className = "setting-field";
@@ -1126,6 +1198,40 @@ class PopoverController {
         selectId,
       ),
       controls,
+    );
+    return field;
+  }
+
+  #createHighlightThicknessField(): HTMLElement {
+    const field = document.createElement("div");
+    field.className = "setting-field";
+    const value = document.createElement("span");
+    value.className = "zoom-value";
+    const input = document.createElement("input");
+    input.id = "highlight-thickness";
+    input.type = "number";
+    input.min = String(MIN_HIGHLIGHT_THICKNESS);
+    input.max = String(MAX_HIGHLIGHT_THICKNESS);
+    input.step = "1";
+    input.inputMode = "numeric";
+    input.value = String(this.#highlightThickness);
+    input.disabled = this.#busyAction !== undefined;
+    input.setAttribute("aria-describedby", "highlight-thickness-unit");
+    input.addEventListener("change", () => {
+      const thickness = normalizeHighlightThickness(Number(input.value));
+      void this.#updateHighlightThickness(thickness);
+    });
+    const unit = document.createElement("span");
+    unit.id = "highlight-thickness-unit";
+    unit.textContent = "px";
+    value.append(input, unit);
+    field.append(
+      this.#createSettingLabel(
+        "Highlight thickness",
+        "Sets the thickness of highlight rings shown on this client.",
+        input.id,
+      ),
+      value,
     );
     return field;
   }
@@ -1273,6 +1379,17 @@ class PopoverController {
     });
   }
 
+  async #updateGmAutoFocusPreference(enabled: boolean): Promise<void> {
+    await this.#runAction("gm-auto-focus-setting", async () => {
+      await setGmAutoFocusEnabled(enabled);
+      this.#gmAutoFocusEnabled = enabled;
+      this.#status = {
+        message: `Automatic GM focusing is ${enabled ? "enabled" : "disabled"}.`,
+        tone: "success",
+      };
+    });
+  }
+
   async #updateSingleTokenZoom(singleTokenZoom: number): Promise<void> {
     await this.#runAction("zoom-setting", async () => {
       await setPlayerSingleTokenZoom(singleTokenZoom);
@@ -1316,6 +1433,17 @@ class PopoverController {
           mode === "CUSTOM"
             ? "Custom highlight color saved."
             : "Default highlight color selected.",
+        tone: "success",
+      };
+    });
+  }
+
+  async #updateHighlightThickness(thickness: number): Promise<void> {
+    await this.#runAction("highlight-thickness-setting", async () => {
+      await setPlayerHighlightThickness(thickness);
+      this.#highlightThickness = thickness;
+      this.#status = {
+        message: "Highlight thickness saved.",
         tone: "success",
       };
     });
@@ -1390,6 +1518,7 @@ class PopoverController {
           this.#highlightEnabled,
           undefined,
           this.#getEffectiveHighlightColor(),
+          this.#highlightThickness,
         ),
       );
     });
@@ -1407,6 +1536,7 @@ class PopoverController {
           this.#highlightEnabled,
           false,
           this.#getEffectiveHighlightColor(),
+          this.#highlightThickness,
         ),
       );
     });
@@ -1489,6 +1619,7 @@ class PopoverController {
               targets,
               includeHidden,
               this.#getEffectiveHighlightColor(),
+              this.#highlightThickness,
             )
           : await focusViewportOnCharacterItems(
               targets,
@@ -1496,6 +1627,7 @@ class PopoverController {
               this.#highlightEnabled,
               includeHidden,
               this.#getEffectiveHighlightColor(),
+              this.#highlightThickness,
             );
       this.#setTargetActionStatus(result, action);
     });

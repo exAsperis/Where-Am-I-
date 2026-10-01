@@ -16,6 +16,7 @@ import {
   focusViewportOnItems,
   focusViewportOnCharacterItems,
   focusViewportOnPlayerCharacters,
+  focusViewportOnAllCharacters,
   highlightItems,
   highlightCharacterItems,
   type TargetActionResult,
@@ -55,6 +56,7 @@ export class BackgroundController {
   readonly #readiness = new SceneReadinessTrigger();
   readonly #recentRequestIds = new RecentRequestIds();
   #globalEnabled = true;
+  #role: "GM" | "PLAYER" = "PLAYER";
   #autoFocusInFlight = false;
   #autoFocusQueued = false;
   #disposed = false;
@@ -66,6 +68,7 @@ export class BackgroundController {
 
   async start(): Promise<void> {
     const role = await OBR.player.getRole();
+    this.#role = role;
     if (role === "GM") {
       this.#gmConnectionId = await OBR.player.getConnectionId();
       this.#disposeCallbacks.push(
@@ -80,53 +83,57 @@ export class BackgroundController {
       );
       await this.#startGmContextMenus();
       this.#requestPendingProcessing();
-      return;
-    }
+    } else {
+      this.#playerId = OBR.player.id;
 
-    this.#playerId = OBR.player.id;
+      try {
+        this.#globalEnabled = (await getRoomSettings()).globalEnabled;
+      } catch (error) {
+        console.error(
+          "Where am I? could not read the global setting; using its enabled default.",
+          error,
+        );
+      }
 
-    try {
-      this.#globalEnabled = (await getRoomSettings()).globalEnabled;
-    } catch (error) {
-      console.error(
-        "Where am I? could not read the global setting; using its enabled default.",
-        error,
+      this.#disposeCallbacks.push(
+        OBR.room.onMetadataChange((metadata) => {
+          this.#globalEnabled = readRoomSettings(metadata).globalEnabled;
+          this.#playAreaEnforcer?.setGlobalEnabled(this.#globalEnabled);
+        }),
+        OBR.broadcast.onMessage(
+          TARGET_ACTION_BROADCAST_CHANNEL,
+          ({ data, connectionId }) => {
+            void this.#handleRemoteCommand(data, connectionId);
+          },
+        ),
+        OBR.broadcast.onMessage(
+          LEGACY_FOCUS_BROADCAST_CHANNEL,
+          ({ data, connectionId }) => {
+            void this.#handleRemoteCommand(data, connectionId);
+          },
+        ),
+        OBR.scene.onMetadataChange((metadata) => {
+          this.#playAreaEnforcer?.handleSceneMetadata(metadata);
+        }),
+        OBR.scene.items.onChange((items) => {
+          this.#playAreaEnforcer?.enqueue(items);
+        }),
       );
+
+      this.#playAreaEnforcer = new PlayerPlayAreaEnforcer(this.#playerId);
+      await this.#playAreaEnforcer.initialize(this.#globalEnabled);
     }
 
     this.#disposeCallbacks.push(
-      OBR.room.onMetadataChange((metadata) => {
-        this.#globalEnabled = readRoomSettings(metadata).globalEnabled;
-        this.#playAreaEnforcer?.setGlobalEnabled(this.#globalEnabled);
-      }),
       OBR.scene.onReadyChange((ready) => {
-        void this.#playAreaEnforcer?.refreshScene();
+        if (this.#role === "PLAYER") {
+          void this.#playAreaEnforcer?.refreshScene();
+        }
         if (this.#readiness.observe(ready)) {
           void this.#runAutomaticFocus("scene change");
         }
       }),
-      OBR.scene.onMetadataChange((metadata) => {
-        this.#playAreaEnforcer?.handleSceneMetadata(metadata);
-      }),
-      OBR.scene.items.onChange((items) => {
-        this.#playAreaEnforcer?.enqueue(items);
-      }),
-      OBR.broadcast.onMessage(
-        TARGET_ACTION_BROADCAST_CHANNEL,
-        ({ data, connectionId }) => {
-          void this.#handleRemoteCommand(data, connectionId);
-        },
-      ),
-      OBR.broadcast.onMessage(
-        LEGACY_FOCUS_BROADCAST_CHANNEL,
-        ({ data, connectionId }) => {
-          void this.#handleRemoteCommand(data, connectionId);
-        },
-      ),
     );
-
-    this.#playAreaEnforcer = new PlayerPlayAreaEnforcer(this.#playerId);
-    await this.#playAreaEnforcer.initialize(this.#globalEnabled);
 
     try {
       const ready = await OBR.scene.isReady();
@@ -423,7 +430,7 @@ export class BackgroundController {
   }
 
   async #runAutomaticFocus(trigger: string): Promise<void> {
-    if (this.#disposed || !this.#globalEnabled) {
+    if (this.#disposed || (this.#role === "PLAYER" && !this.#globalEnabled)) {
       return;
     }
     if (this.#autoFocusInFlight) {
@@ -437,17 +444,38 @@ export class BackgroundController {
         getPlayerSettings(),
         getRoomSettings(),
       ]);
-      if (!this.#globalEnabled || !settings.autoFocusEnabled) {
+      const autoFocusEnabled =
+        this.#role === "GM"
+          ? settings.gmAutoFocusEnabled
+          : settings.autoFocusEnabled;
+      if (
+        (this.#role === "PLAYER" && !this.#globalEnabled) ||
+        !autoFocusEnabled
+      ) {
         return;
       }
 
-      const result = await focusViewportOnPlayerCharacters(
-        this.#playerId,
-        settings.singleTokenZoom,
-        settings.highlightEnabled,
-        undefined,
-        resolveHighlightColor("PLAYER", settings, roomSettings),
+      const highlightColor = resolveHighlightColor(
+        this.#role,
+        settings,
+        roomSettings,
       );
+      const result =
+        this.#role === "GM"
+          ? await focusViewportOnAllCharacters(
+              settings.singleTokenZoom,
+              settings.highlightEnabled,
+              highlightColor,
+              settings.highlightThickness,
+            )
+          : await focusViewportOnPlayerCharacters(
+              this.#playerId,
+              settings.singleTokenZoom,
+              settings.highlightEnabled,
+              undefined,
+              highlightColor,
+              settings.highlightThickness,
+            );
       if (!result.ok && result.reason === "SDK_ERROR") {
         console.error(`Where am I? automatic focus failed during ${trigger}.`);
       }
@@ -499,6 +527,7 @@ export class BackgroundController {
             settings.highlightEnabled,
             decision.routed.command.targetCharacterId,
             highlightColor,
+            settings.highlightThickness,
           );
         } else {
           const command = decision.routed.command;
@@ -511,6 +540,7 @@ export class BackgroundController {
               command.targetCharacterIds,
               highlightColor,
               command.requireVisible,
+              settings.highlightThickness,
             );
           } else if (command.targetMode === "ALL_ITEMS") {
             result = await focusViewportOnItems(
@@ -519,12 +549,14 @@ export class BackgroundController {
               settings.highlightEnabled,
               highlightColor,
               command.requireVisible,
+              settings.highlightThickness,
             );
           } else if (command.action === "HIGHLIGHT") {
             result = await highlightCharacterItems(
               command.targetCharacterIds,
               command.includeHidden,
               highlightColor,
+              settings.highlightThickness,
             );
           } else {
             result = await focusViewportOnCharacterItems(
@@ -533,6 +565,7 @@ export class BackgroundController {
               settings.highlightEnabled,
               command.includeHidden,
               highlightColor,
+              settings.highlightThickness,
             );
           }
           const toast = formatTargetActionToast(command);

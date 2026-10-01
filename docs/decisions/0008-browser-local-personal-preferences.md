@@ -7,8 +7,9 @@ Accepted
 ## Context
 
 Owlbear player metadata belongs to the live player connection. A page refresh
-creates a new connection, so personal feature settings reverted to defaults
-despite appearing to save successfully.
+creates a new connection, so maximum zoom, automatic focus, highlight
+visibility, and highlight thickness reverted to defaults despite appearing to
+save successfully.
 
 ## Decision
 
