@@ -5,7 +5,6 @@ vi.mock("@owlbear-rodeo/sdk", () => ({ default: {} }));
 
 import { PLAY_AREA_METADATA_KEY } from "./constants";
 import {
-  clampItemGroup,
   clampItemPosition,
   getBoundsOffsets,
   type AxisAlignedRect,
@@ -101,7 +100,7 @@ describe("Player Play Area geometry", () => {
       { x: 52, y: 70 },
     ],
   ])(
-    "slides along every boundary by clamping only the illegal axis",
+    "returns the nearest legal position on each crossed boundary",
     (input, expected) => {
       expect(clampItemPosition(input, centered, area).position).toEqual(
         expected,
@@ -109,7 +108,7 @@ describe("Player Play Area geometry", () => {
     },
   );
 
-  it("naturally releases the boundary when a proposal re-enters the legal area", () => {
+  it("leaves a later legal position unchanged after an earlier correction", () => {
     expect(
       clampItemPosition({ x: 120, y: 52 }, centered, area).position,
     ).toEqual({
@@ -120,36 +119,6 @@ describe("Player Play Area geometry", () => {
       position: { x: 75, y: 52 },
       changed: false,
     });
-  });
-
-  it("moves a group by one shared vector at an edge", () => {
-    const result = clampItemGroup(
-      [
-        { position: { x: 85, y: 20 }, offsets: centered },
-        { position: { x: 110, y: 20 }, offsets: centered },
-      ],
-      area,
-    );
-    expect(result.delta).toEqual({ x: -20, y: 0 });
-  });
-
-  it("preserves group formation when crossing a corner", () => {
-    const positions = [
-      { x: -20, y: -30 },
-      { x: 15, y: -5 },
-    ];
-    const result = clampItemGroup(
-      positions.map((position) => ({ position, offsets: centered })),
-      area,
-    );
-    const corrected = positions.map((position) => ({
-      x: position.x + result.delta.x,
-      y: position.y + result.delta.y,
-    }));
-    expect(result.delta.x).toBe(30);
-    expect(result.delta.y).toBe(40);
-    expect(corrected[1]!.x - corrected[0]!.x).toBe(35);
-    expect(corrected[1]!.y - corrected[0]!.y).toBe(25);
   });
 });
 

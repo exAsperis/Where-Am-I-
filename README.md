@@ -75,8 +75,12 @@ moving, resizing, hiding, or deleting them does not change the saved area.
 
 GM Settings shows whether a Play Area is configured, enables or disables
 **Keep player characters inside Play Area**, and can clear the saved area. When
-enabled, Characters added or moved by a player are live-clamped so their entire
-visible bounds remain inside the rectangle. GM movement remains unrestricted.
+enabled, Characters added or moved outside it by a player are returned to the
+nearest legal position so their entire rendered bounds finish inside the
+rectangle when possible. GM movement remains unrestricted. Owlbear's native
+dragging may briefly show a Character outside the boundary before the
+corrective scene update arrives; the feature does not prevent that visual
+penetration.
 Owlbear does not expose whether a player-authored position write came from a
 native drag or another extension, so both are constrained consistently.
 
@@ -280,20 +284,31 @@ connection:
 40. Define a Player Play Area from one item and several selected items. Move,
     resize, hide, and delete the source items and confirm the saved rectangle
     does not change.
-41. On a separate player client, drag slowly and quickly through every edge,
-    hold the pointer far outside, slide along an edge, and drag diagonally into
-    a corner. Confirm nearest-edge clamping without ping-pong or jitter.
-42. Drag multiple selected Characters into an edge and corner and confirm their
-    relative formation is preserved. Drop a new Character far outside and, if
-    supported, rapidly throw or flick one. Repeat with latency when practical.
-43. Confirm scaled and rotated Character bounds remain fully inside, oversized
-    Characters settle deterministically, and GM movement stays unrestricted.
-44. Confirm one completed-movement notification, no viewport movement while a
-    corrected Character is visible, and recovery Focus when it is wholly
-    offscreen.
-45. Disable and clear the Play Area, globally disable and re-enable Where am I?,
-    and change scenes. Confirm no pre-existing Character is swept or stale
-    correction/recovery work carried into another scene.
+41. On a separate player client, move a Character outside each edge and confirm
+    it returns to the nearest legal position. Brief penetration during Owlbear's
+    native drag is expected before the corrective update arrives.
+42. Move a Character outside each corner and confirm both axes are corrected to
+    the nearest legal position.
+43. Move a Character quickly and far outside the area, then drop a new Character
+    far outside. Confirm both return to their nearest legal positions.
+44. Confirm corrected Characters' full rendered bounds finish inside the Play
+    Area when possible, including scaled and rotated Characters.
+45. Confirm oversized Characters settle deterministically without a correction
+    loop and show only the existing one-time warning.
+46. Confirm GM-authored movement remains unrestricted.
+47. Move two or more Characters independently and in quick succession. Confirm
+    correcting one never moves another unrelated Character, even when both
+    appear in one scene update.
+48. Confirm a visible correction causes no viewport movement and no toast.
+49. Confirm a wholly offscreen corrected Character receives the existing Focus
+    and highlight recovery plus exactly one informational notification:
+    **Character returned to the Play Area.**
+50. Disable global player behavior, disable the Play Area, clear it, and change
+    scenes. Confirm correction and recovery state clean up correctly.
+51. Confirm pre-existing Characters are not swept merely because the extension,
+    scene, or Play Area loads.
+52. Repeat movement checks under noticeable latency where practical, treating
+    this as corrective snap-back testing rather than wall collision testing.
 
 Also confirm concise feedback for an absent scene, an absent character, a
 completed focus, a disabled global feature, and a sent remote command. Check

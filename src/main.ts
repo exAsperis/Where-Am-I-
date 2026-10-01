@@ -502,7 +502,7 @@ class PopoverController {
         this.#createPlayAreaState(),
         this.#createToggle(
           "Keep player characters inside Play Area",
-          "Constrains Characters added or moved by a player. GM movement remains unrestricted.",
+          "Returns Characters added or moved by a player to the Play Area if they leave it. GM movement remains unrestricted.",
           this.#playArea?.enabled ?? false,
           this.#busyAction !== undefined || !this.#playArea,
           (enabled) => void this.#updatePlayAreaEnabled(enabled),

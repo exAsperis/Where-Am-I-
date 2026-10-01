@@ -143,14 +143,19 @@ Zoom last changes effective position, and setting Y can alter X. Close Players a
 
 A screenshot cannot prove timing or synchronization. Observe behavior over time or record video. Multi-client behavior must be tested with the required signed-in clients; report unavailable cases as unverified. Multiple GM clients each run a background extension instance and can expose real coordination bugs, not harmless noise.
 
-### Player Play Area live-movement checks
+### Player Play Area checks
 
 Use separate GM and player clients. Define the area through the GM item context
-menu, then test slow and fast drags through all edges, holding the pointer far
-outside, sliding along an edge, diagonal corner contact, multi-selection, new
-assets dropped far outside, and rapid throw/flick input when available. Repeat
-under noticeable latency if practical. Confirm whole-token containment,
-unrestricted GM movement, no correction loop or notification spam, and recovery
-Focus only when the corrected Character is wholly outside the player's visible
-viewport. Record any visible fight between native dragging and correction; do
-not silently substitute a post-drop-only design.
+menu, then move Characters outside every edge and corner, quickly and far
+outside, independently in quick succession, and by dropping a new Character far
+outside. Repeat under noticeable latency if practical. Confirm that each
+Character independently returns to its nearest legal position, its full bounds
+finish inside when possible, oversized Characters settle deterministically, GM
+movement is unrestricted, and visible corrections cause no notification or
+viewport movement. Recovery Focus and one informational notification should
+occur only when a corrected Character is wholly outside the player's viewport.
+
+Owlbear's native drag may briefly display a Character beyond the boundary before
+the corrective scene update arrives. That penetration is expected: corrective
+snap-back is the supported behavior, not hard collision or interception of live
+movement.

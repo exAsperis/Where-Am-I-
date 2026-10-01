@@ -44,6 +44,8 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
   orange controls identify pending groups and provide cancellation.
 - Keep personal zoom and highlight preferences.
 - Set the room's shared highlight color, which defaults to orange.
+- Define a scene-specific Player Play Area that returns player-moved Characters
+  to the nearest legal position if they leave it.
 
 ![Pending party highlights on hidden tokens, with cancellation controls](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-pending-highlight.jpg?v=1.1.0)
 
@@ -58,8 +60,8 @@ setup guidance when a scene, player, assignment, or visible token is missing.
 
 Where am I? has no backend, accounts, analytics, or external data storage.
 Preferences use browser-local storage namespaced by Owlbear Rodeo player ID,
-the global enablement setting uses room metadata, and remote GM requests use
-Owlbear Rodeo broadcasts.
+the global enablement setting uses room metadata, Play Area configuration is
+stored in scene metadata, and remote GM requests use Owlbear Rodeo broadcasts.
 Highlights are temporary client-local scene items, so each recipient sees only
 their own highlight animation. Players also receive a concise toast identifying
 the GM action and its target.

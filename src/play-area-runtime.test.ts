@@ -174,17 +174,52 @@ describe("Player Play Area runtime", () => {
     enforcer.dispose();
   });
 
-  it("detects a newly added player Character", async () => {
+  it("detects a newly added Character from its current player-authored change", async () => {
     state.items = [];
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
     state.items = [character("new", -100)];
+    state.items[0]!.createdUserId = "original-creator";
     enforcer.enqueue([...state.items]);
     await vi.waitFor(() => expect(state.items[0]?.position.x).toBe(10));
     enforcer.dispose();
   });
 
-  it("suppresses its correction echo but accepts the next distinct live proposal", async () => {
+  it("corrects an illegal Character without moving a legal changed Character", async () => {
+    state.items = [character("outside", 50), character("inside", 40)];
+    const enforcer = new PlayerPlayAreaEnforcer("player");
+    await enforcer.initialize(true);
+
+    state.items = [character("outside", 150), character("inside", 60)];
+    enforcer.enqueue([...state.items]);
+
+    await vi.waitFor(() => expect(state.items[0]?.position.x).toBe(90));
+    expect(state.items[1]?.position).toEqual({ x: 60, y: 50 });
+    expect(sdk.scene.items.updateItems).toHaveBeenCalledWith(
+      ["outside"],
+      expect.any(Function),
+    );
+    enforcer.dispose();
+  });
+
+  it("corrects two illegal Characters independently at different edges", async () => {
+    state.items = [character("left", 50), character("right", 50)];
+    const enforcer = new PlayerPlayAreaEnforcer("player");
+    await enforcer.initialize(true);
+
+    state.items = [character("left", -100), character("right", 150)];
+    enforcer.enqueue([...state.items]);
+
+    await vi.waitFor(() => expect(state.items[0]?.position.x).toBe(10));
+    expect(state.items[1]?.position.x).toBe(90);
+    expect(sdk.scene.items.updateItems).toHaveBeenCalledWith(
+      ["left", "right"],
+      expect.any(Function),
+    );
+    enforcer.dispose();
+  });
+
+  it("suppresses its correction echo but accepts the next distinct player movement", async () => {
     state.items = [character("hero", 50)];
     const enforcer = new PlayerPlayAreaEnforcer("player");
     await enforcer.initialize(true);
@@ -312,14 +347,16 @@ describe("Player Play Area runtime", () => {
     enforcer.enqueue([...state.items]);
     await vi.runAllTimersAsync();
     expect(focus).not.toHaveBeenCalled();
+    expect(sdk.notification.show).not.toHaveBeenCalled();
 
     state.screenOffset = { x: 500, y: 500 };
     state.items[0] = character("hero", -150);
     enforcer.enqueue([...state.items]);
     await vi.runAllTimersAsync();
     expect(focus).toHaveBeenCalledTimes(1);
+    expect(sdk.notification.show).toHaveBeenCalledTimes(1);
     expect(sdk.notification.show).toHaveBeenCalledWith(
-      "Character kept inside the Play Area.",
+      "Character returned to the Play Area.",
       "INFO",
     );
     enforcer.dispose();

@@ -10,7 +10,7 @@ import {
   PLAY_AREA_RECOVERY_DEBOUNCE_MS,
 } from "./constants";
 import {
-  clampItemGroup,
+  clampItemPosition,
   getBoundsOffsets,
   isCharacter,
   positionsApproximatelyEqual,
@@ -293,13 +293,7 @@ export class PlayerPlayAreaEnforcer {
           item.position,
           PLAY_AREA_CORRECTION_EPSILON,
         );
-      if (
-        (isNew || moved) &&
-        item.lastModifiedUserId === this.#playerId &&
-        (!isNew ||
-          item.createdUserId === this.#playerId ||
-          item.lastModifiedUserId === this.#playerId)
-      ) {
+      if ((isNew || moved) && item.lastModifiedUserId === this.#playerId) {
         changed.push(item);
       }
       this.#baseline.set(item.id, item);
@@ -319,23 +313,25 @@ export class PlayerPlayAreaEnforcer {
       })),
     );
     if (this.#disposed || generation !== this.#generation) return;
-    const group = clampItemGroup(
-      positioned.map(({ item, offsets }) => ({
-        position: item.position,
+    const corrections = positioned.flatMap(({ item, offsets }) => {
+      const result = clampItemPosition(
+        item.position,
         offsets,
-      })),
-      settings,
-      PLAY_AREA_CORRECTION_EPSILON,
-    );
-    if (!group.changed) return;
-
-    const corrections = positioned.map(({ item }) => ({
-      id: item.id,
-      position: {
-        x: item.position.x + group.delta.x,
-        y: item.position.y + group.delta.y,
-      },
-    }));
+        settings,
+        PLAY_AREA_CORRECTION_EPSILON,
+      );
+      return result.changed
+        ? [
+            {
+              id: item.id,
+              position: result.position,
+              oversizedX: result.oversizedX,
+              oversizedY: result.oversizedY,
+            },
+          ]
+        : [];
+    });
+    if (corrections.length === 0) return;
     for (const correction of corrections) {
       this.#expectedCorrections.set(correction.id, correction.position);
       this.#recoveryIds.add(correction.id);
@@ -350,11 +346,14 @@ export class PlayerPlayAreaEnforcer {
       },
     );
     if (this.#disposed || generation !== this.#generation) return;
-    if (group.oversizedX || group.oversizedY) {
-      const newOversized = corrections.some(
+    const oversized = corrections.filter(
+      (correction) => correction.oversizedX || correction.oversizedY,
+    );
+    if (oversized.length > 0) {
+      const newOversized = oversized.some(
         (correction) => !this.#oversizedNotified.has(correction.id),
       );
-      for (const correction of corrections)
+      for (const correction of oversized)
         this.#oversizedNotified.add(correction.id);
       if (newOversized) {
         await OBR.notification.show(
@@ -445,11 +444,11 @@ export class PlayerPlayAreaEnforcer {
           false,
           resolveHighlightColor("PLAYER", player, room),
         );
+        await OBR.notification.show(
+          "Character returned to the Play Area.",
+          "INFO",
+        );
       }
-      await OBR.notification.show(
-        "Character kept inside the Play Area.",
-        "INFO",
-      );
     } catch (error) {
       console.error(
         "Where am I? could not complete Play Area recovery.",
