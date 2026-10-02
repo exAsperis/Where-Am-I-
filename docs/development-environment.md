@@ -102,6 +102,13 @@ build.
 
 ## Release and cache invalidation
 
+Every released public behavior change must advance the canonical version using
+[Semantic Versioning](https://semver.org/): increment MAJOR for an incompatible
+change, MINOR for backward-compatible functionality, and PATCH for a
+backward-compatible bug fix. Do not leave the version unchanged because a
+change is small. Beta builds use the same canonical version and append `-beta`
+at build time; do not encode the prerelease suffix in source files.
+
 For every public behavior change, update all of these together:
 
 - `package.json` version;

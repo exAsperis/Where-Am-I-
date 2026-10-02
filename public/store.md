@@ -2,8 +2,8 @@
 title: Where am I?
 description: Focus and highlight characters in Owlbear Rodeo.
 author: ex Asperis
-image: https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-party-focus.jpg?v=1.2.0
-icon: https://where-am-i.ex-asperis.com/icon.svg?v=1.2.0
+image: https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-party-focus.jpg?v=1.3.0
+icon: https://where-am-i.ex-asperis.com/icon.svg?v=1.3.0
 tags:
   - automation
 manifest: https://where-am-i.ex-asperis.com/manifest.json
@@ -15,11 +15,11 @@ learn-more: https://github.com/exAsperis/Where-Am-I-
 Where am I? keeps players oriented by focusing their visible, player-owned
 Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
-![A GM focusing the party's characters across an Owlbear Rodeo scene](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-party-focus.jpg?v=1.2.0)
+![A GM focusing the party's characters across an Owlbear Rodeo scene](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-party-focus.jpg?v=1.3.0)
 
 ## For players
 
-![A player focusing their character with a private highlight](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-player-focus.jpg?v=1.2.0)
+![A player focusing their character with a private highlight](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-player-focus.jpg?v=1.3.0)
 
 - Automatically focus your character when joining or changing scenes.
 - Focus all of your characters together whenever you choose.
@@ -31,7 +31,7 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 
 ## For GMs
 
-![The GM panel with player, character, party, and scene-token controls](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-gm-panel-all-expanded.jpg?v=1.2.0)
+![The GM panel with player, character, party, and scene-token controls](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-gm-panel-all-expanded.jpg?v=1.3.0)
 
 - Enable or disable player-facing behavior for the room.
 - Focus or highlight a player or character for the GM, controlling player, or
@@ -47,7 +47,7 @@ Character-layer tokens and moving only their local Owlbear Rodeo viewport.
 - Define a scene-specific Player Play Area that returns player-moved Characters
   to the nearest legal position if they leave it.
 
-![Pending party highlights on hidden tokens, with cancellation controls](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-pending-highlight.jpg?v=1.2.0)
+![Pending party highlights on hidden tokens, with cancellation controls](https://raw.githubusercontent.com/exAsperis/Where-Am-I-/main/screenshots/wai-pending-highlight.jpg?v=1.3.0)
 
 Only visible items on the Character layer are included. Ownership is determined
 by the player who created the token. When a player owns multiple characters,

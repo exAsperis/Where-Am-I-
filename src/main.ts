@@ -68,6 +68,7 @@ import {
   moveCharacterTokenToViewportCenter,
   toggleCharacterTokenVisibility,
 } from "./token-actions";
+import { clearMoveHereReticle, showMoveHereReticle } from "./move-here-reticle";
 import {
   MY_SETTINGS_EXPANDED_KEY,
   readDisclosurePreference,
@@ -229,6 +230,7 @@ class PopoverController {
   }
 
   dispose(): void {
+    void clearMoveHereReticle();
     for (const dispose of this.#disposeCallbacks.splice(0)) {
       dispose();
     }
@@ -684,17 +686,25 @@ class PopoverController {
         );
         const label = getCharacterDisplay(character).characterName;
         if (this.#showMoveHere) {
-          actions.append(
-            this.#createButton(
-              this.#busyAction === `move-token-${character.id}`
-                ? "Moving…"
-                : "Move here",
-              "small",
-              this.#busyAction !== undefined,
-              () => void this.#moveTokenToViewportCenter(character.id),
-              `Move ${label} to the center of the viewport`,
-            ),
+          const moveHereButton = this.#createButton(
+            this.#busyAction === `move-token-${character.id}`
+              ? "Moving…"
+              : "Move here",
+            "small",
+            this.#busyAction !== undefined,
+            () => {
+              void clearMoveHereReticle();
+              void this.#moveTokenToViewportCenter(character.id);
+            },
+            `Move ${label} to the center of the viewport`,
           );
+          moveHereButton.addEventListener("pointerenter", () => {
+            void showMoveHereReticle(character);
+          });
+          moveHereButton.addEventListener("pointerleave", () => {
+            void clearMoveHereReticle();
+          });
+          actions.append(moveHereButton);
         }
         actions.append(
           this.#createGmActionMenu(
