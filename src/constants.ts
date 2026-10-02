@@ -40,6 +40,7 @@ export const FOCUS_COMMAND_MAX_AGE_MS = 30_000;
 export const MAX_RECENT_REQUEST_IDS = 100;
 
 export const HIGHLIGHT_METADATA_KEY = `${EXTENSION_NAMESPACE}/highlight`;
+export const MOVE_HERE_RETICLE_METADATA_KEY = `${EXTENSION_NAMESPACE}/move-here-reticle`;
 export const HIGHLIGHT_COLOR = "#fa5300";
 export const HIGHLIGHT_INITIAL_SCALE = 20;
 export const HIGHLIGHT_SHRINK_MS = 3_000;
