@@ -2,7 +2,12 @@
 
 ## Scope
 
-This repository is developed in Codex Desktop on Windows with PowerShell and may live beneath OneDrive. This document is the source of truth for environment recovery, internal verification, releases, and Owlbear Rodeo manual testing. Product and architecture decisions belong in `docs/decisions/`.
+This repository is developed in Codex Desktop on Windows with PowerShell. Do
+not infer that a checkout is stored in or synchronized by OneDrive from a
+Windows file-lock or dependency error; verify its resolved path first. This
+document is the source of truth for environment recovery, internal
+verification, releases, and Owlbear Rodeo manual testing. Product and
+architecture decisions belong in `docs/decisions/`.
 
 ## Toolchain
 
@@ -25,13 +30,22 @@ $env:PATH = '<RETURNED_NODE_BIN_DIRECTORY>;' + $env:PATH
 
 Do not save machine-specific returned paths in repository files. The project declares pnpm in `package.json`, commits `pnpm-lock.yaml`, and uses `pnpm-workspace.yaml` to make the package-manager boundary explicit.
 
-## Safe filesystem work and OneDrive recovery
+## Safe filesystem work and dependency recovery
 
 Use Windows-safe commands and literal absolute paths for risky operations. Before any recursive delete or move, resolve the target and confirm it is an exact child of this repository. Never delete an unresolved variable, computed broad path, repository root, home directory, or filesystem root.
 
-OneDrive can leave `node_modules` present but partially missing. Typical misleading TypeScript errors include missing `chai`, `deep-eql`, or `estree` type definitions.
+On Windows, a running project process can lock native dependency files and
+cause `EPERM`, access-denied, rename, or removal failures. Before treating
+`node_modules` as corrupt, inspect running Node and package-manager processes
+and stop only processes whose command line resolves to this repository. A
+cloud-synchronized checkout can also leave `node_modules` partially missing,
+but do not attribute a failure to OneDrive unless the resolved checkout path or
+other evidence actually shows that OneDrive is involved. Typical symptoms of
+an incomplete dependency tree include missing `chai`, `deep-eql`, or `estree`
+type definitions.
 
-Recovery:
+After ruling out or stopping repository-scoped file locks, recover an
+incomplete dependency tree as follows:
 
 1. Get the repository root and exact dependency path:
 
